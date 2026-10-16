@@ -87,11 +87,11 @@ export function onHallRing(radius: number, degrees: number, y = 0): Vec3 {
 
 /** Placeholder looks, in visiting order. Looks 1–5 are outside, 6–10 inside. */
 const LOOKS: Omit<PedestalConfig, "id" | "zone" | "position">[] = [
-  { silhouette: "dress", fabric: "#f2b02e", accent: "#b5562f" },
-  { silhouette: "tunic", fabric: "#2f4f9c", accent: "#f2c14e" },
-  { silhouette: "dress", fabric: "#d8322c", accent: "#f3e6cf" },
-  { silhouette: "dress", fabric: "#1f7a4a", accent: "#f3e6cf" },
-  { silhouette: "dress", fabric: "#ef8c95", accent: "#fff4ea" },
+  { silhouette: "dress", fabric: "#bf2430", accent: "#f3d9a4" },
+  { silhouette: "dress", fabric: "#22409b", accent: "#f2c14e" },
+  { silhouette: "dress", fabric: "#e98ba1", accent: "#fff3ea" },
+  { silhouette: "dress", fabric: "#17734a", accent: "#f3e2b8" },
+  { silhouette: "dress", fabric: "#e5a429", accent: "#8f3b1f" },
   { silhouette: "tunic", fabric: "#efe3cc", accent: "#8f3b1f" },
   { silhouette: "dress", fabric: "#6b2f4a", accent: "#e0b45a" },
   { silhouette: "tunic", fabric: "#c4822f", accent: "#2c3f6b" },
@@ -154,7 +154,18 @@ function framingFor(p: PedestalConfig): CameraStation {
   return { position: onHallRing(ORBIT_RADIUS, degrees, 1.75), target };
 }
 
-const PEDESTAL_STATIONS = PEDESTALS.map(framingFor);
+/**
+ * Display One opens the courtyard: instead of a close-up, the camera stands
+ * just inside the gate on the rug and looks down the whole avenue of looks,
+ * with Look 01 framed on the left and the rear archway at the centre.
+ */
+const DISPLAY_ONE_STATION: CameraStation = {
+  position: [0.6, 1.55, COURTYARD.halfZ + 1.1],
+  target: [-1.0, 2.05, 0],
+  lens: 1.3,
+};
+
+const PEDESTAL_STATIONS = PEDESTALS.map((p, i) => (i === 0 ? DISPLAY_ONE_STATION : framingFor(p)));
 
 /** Pause on the archway, looking through it into the hall, before stepping inside. */
 const THRESHOLD_STATION: CameraStation = {
@@ -163,11 +174,12 @@ const THRESHOLD_STATION: CameraStation = {
 };
 
 const NUMBER_WORDS = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+const titleCase = (word: string) => word[0].toUpperCase() + word.slice(1);
 
 function lookChapter(p: PedestalConfig, i: number): Chapter {
   return {
     eyebrow: `Look ${String(i + 1).padStart(2, "0")}`,
-    title: `Display ${NUMBER_WORDS[i]}`,
+    title: `Display ${titleCase(NUMBER_WORDS[i])}`,
     body: `Placeholder ${p.silhouette}. Heritage outfit ${NUMBER_WORDS[i]} will stand here.`,
   };
 }
@@ -232,9 +244,11 @@ export const PALETTE = {
   haze: "#f1d9bd",
   skyHorizon: "#e4eef6",
   skyZenith: "#2b78d0",
-  wallWarm: "#d88a54",
-  wallLight: "#e09a63",
-  wallTrim: "#efcf9f",
+  wallWarm: "#cc7a48",
+  wallLight: "#d98a55",
+  wallTrim: "#eec594",
+  niche: "#b4653a",
+  canopyTerracotta: "#c8733f",
   canopyCream: "#f3e2c4",
   canopyRed: "#c8442f",
   timber: "#6b4428",

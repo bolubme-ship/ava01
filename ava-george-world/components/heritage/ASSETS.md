@@ -16,7 +16,8 @@ Each item below names the component it would replace.
 
 | Asset | Format | Replaces |
 |---|---|---|
-| One 3D model per outfit (10 looks), on or off a dress form | GLB with PBR textures, < 3 MB each, Draco-compressed | `PlaceholderGarment` in `scene/DisplayPedestal.tsx` |
+| One 3D model per outfit (10 looks), on or off a dress form | GLB with PBR textures (albedo, normal, roughness; sheen if available), < 3 MB each, Draco-compressed | `DressForm` in `scene/DisplayPedestal.tsx` (the procedural dresses with embroidered bands are stand-ins) |
+| Close-up photos or flat scans of each outfit's fabric and embroidery | 2K PNG/JPG | `useFabricTexture` in `proceduralTextures.ts`, if models aren't ready yet |
 | Or, if 3D isn't available yet: a clean cut-out photo per outfit, front view | Transparent PNG/WebP, ~1500 px tall | Shown on a camera-facing card on each plinth |
 
 ## Environment

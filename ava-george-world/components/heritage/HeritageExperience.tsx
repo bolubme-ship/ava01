@@ -48,6 +48,15 @@ export function HeritageExperience() {
           labelLayer={labelLayerRef}
         />
       </div>
+      {/*
+        Colour grade, done in CSS so it costs nothing on the GPU: a warm
+        golden-hour wash and a soft vignette over the 3D scene.
+      */}
+      <div
+        className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(60,25,8,0.35)_100%)]"
+        aria-hidden="true"
+      />
+      <div className="pointer-events-none fixed inset-0 bg-[#ffb36b]/10 mix-blend-soft-light" aria-hidden="true" />
       <div ref={labelLayerRef} className="pointer-events-none fixed inset-0 z-20 overflow-hidden" />
       {/* Soft scrim so overlay copy stays legible over bright walls. */}
       <div
@@ -70,11 +79,21 @@ export function HeritageExperience() {
                 <Hero chapter={chapter} onExplore={() => scrollToStop(1)} />
               </div>
             ) : (
-              <div className="sticky top-0 flex h-svh items-end px-4 pb-12 sm:px-10 sm:pb-16 lg:px-16">
-                <div className="max-w-md text-[#fbf1e1]">
-                  <p className="text-xs tracking-[0.3em] uppercase opacity-80">{chapter.eyebrow}</p>
-                  <h2 className="mt-3 font-display text-4xl leading-none sm:text-5xl">{chapter.title}</h2>
-                  <p className="mt-4 text-sm leading-relaxed opacity-90 sm:text-base">{chapter.body}</p>
+              <div className="sticky top-0 flex h-svh items-end px-4 pb-14 sm:px-10 sm:pb-20 lg:px-16">
+                {/* Local shade behind the copy, so it reads over bright floor and walls. */}
+                <div
+                  className="pointer-events-none absolute bottom-0 left-0 h-2/3 w-full bg-[radial-gradient(ellipse_at_bottom_left,rgba(42,23,12,0.6),rgba(42,23,12,0.25)_45%,transparent_70%)] sm:w-3/4"
+                  aria-hidden="true"
+                />
+                <div className="relative max-w-md text-[#fffaf2]">
+                  <p className="text-xs font-medium tracking-[0.34em] uppercase drop-shadow">{chapter.eyebrow}</p>
+                  <span className="mt-4 block h-px w-10 bg-[#fffaf2]/80" aria-hidden="true" />
+                  <h2 className="mt-4 font-display text-[clamp(2.6rem,5vw,4.25rem)] leading-[0.95] font-medium drop-shadow-[0_2px_12px_rgba(42,23,12,0.4)]">
+                    {chapter.title}
+                  </h2>
+                  <p className="mt-4 max-w-sm text-sm leading-relaxed text-[#fffaf2]/90 drop-shadow sm:text-base">
+                    {chapter.body}
+                  </p>
                 </div>
               </div>
             )}

@@ -2,14 +2,19 @@
 
 import { useLayoutEffect, useMemo, useRef } from "react";
 import {
+  CircleGeometry,
   Color,
+  DoubleSide,
   IcosahedronGeometry,
   InstancedMesh,
   LatheGeometry,
   Object3D,
+  Shape,
+  ShapeGeometry,
   SphereGeometry,
   Vector2,
   Vector3,
+  type BufferGeometry,
 } from "three";
 import type { Vec3 } from "../config";
 import { useProceduralTexture } from "./proceduralTextures";
@@ -54,20 +59,45 @@ function useInstances(ref: React.RefObject<InstancedMesh | null>, blobs: Blob[])
   }, [ref, blobs]);
 }
 
-/** Low-poly blob (20 triangles): at leaf size the facets read as foliage. */
-const blobGeometry = new IcosahedronGeometry(1, 0);
+/** Small round blob for fruit. */
+const blobGeometry = new IcosahedronGeometry(1, 1);
+
+/** Pointed leaf card (≈8 triangles), 2 units long on y, double-sided. */
+const leafGeometry = (() => {
+  const shape = new Shape();
+  shape.moveTo(0, -1);
+  shape.quadraticCurveTo(0.5, -0.1, 0, 1);
+  shape.quadraticCurveTo(-0.5, -0.1, 0, -1);
+  return new ShapeGeometry(shape, 3);
+})();
+
+/** Rounded bract / petal (6 triangles) for bougainvillea and flowers. */
+const bractGeometry = new CircleGeometry(1, 6);
 
 /*
  * Leaves and blossoms receive shadows but don't cast them: casting would
  * double their cost in the shadow pass. Solid stand-ins (tree crowns) cast
  * the shade instead.
  */
-function BlobCloud({ blobs, wind = 0.02 }: { blobs: Blob[]; wind?: number }) {
+function BlobCloud({
+  blobs,
+  wind = 0.02,
+  geometry = leafGeometry,
+}: {
+  blobs: Blob[];
+  wind?: number;
+  geometry?: BufferGeometry;
+}) {
   const ref = useRef<InstancedMesh>(null);
-  const material = useWindMaterial({ roughness: 0.75 }, wind);
+  const material = useWindMaterial({ roughness: 0.7, side: DoubleSide }, wind);
   useInstances(ref, blobs);
-  return <instancedMesh ref={ref} args={[blobGeometry, material, blobs.length]} receiveShadow />;
+  return <instancedMesh ref={ref} args={[geometry, material, blobs.length]} receiveShadow />;
 }
+
+/** Instance scale for a leaf card of overall size `s`. */
+const leafScale = (s: number, rand: () => number) => new Vector3(s * (0.75 + rand() * 0.3), s * 1.5, 1);
+/** Instance scale for a bract of overall size `s`. */
+const bractScale = (s: number, rand: () => number) => new Vector3(s, s * (0.8 + rand() * 0.3), 1);
 
 // ---------------------------------------------------------------------------
 // Bougainvillea
@@ -108,7 +138,7 @@ export function Bougainvillea({
       const s = isBlossom ? 0.032 + rand() * 0.034 : 0.038 + rand() * 0.04;
       const blob: Blob = {
         position: p.clone().addScaledVector(n, bulge),
-        scale: new Vector3(s * (1 + rand() * 0.6), s * (0.7 + rand() * 0.5), s * 0.55),
+        scale: isBlossom ? bractScale(s * 1.1, rand) : leafScale(s, rand),
         rotation: new Vector3(rand() * 6.28, rand() * 6.28, rand() * 6.28),
         color: isBlossom
           ? BLOSSOM_COLORS[Math.floor(rand() * BLOSSOM_COLORS.length)]
@@ -150,7 +180,7 @@ export function Bougainvillea({
   return (
     <group>
       <BlobCloud blobs={leaves} wind={0.012} />
-      <BlobCloud blobs={blossoms} wind={0.02} />
+      <BlobCloud blobs={blossoms} wind={0.02} geometry={bractGeometry} />
     </group>
   );
 }
@@ -281,14 +311,14 @@ export function CitrusTree({ position, scale = 1, seed = 5 }: { position: Vec3; 
     const center = new Vector3(0, 2.55, 0);
     const leaves: Blob[] = [];
     const fruit: Blob[] = [];
-    for (let i = 0; i < 600; i++) {
+    for (let i = 0; i < 1000; i++) {
       // Points on a slightly squashed sphere shell, biased outward.
       const dir = new Vector3(rand() * 2 - 1, (rand() * 2 - 1) * 0.85, rand() * 2 - 1).normalize();
       const r = 0.95 * (0.75 + rand() * 0.3);
-      const s = 0.085 + rand() * 0.055;
+      const s = 0.06 + rand() * 0.035;
       leaves.push({
         position: center.clone().addScaledVector(dir, r),
-        scale: new Vector3(s * 1.4, s * 0.8, s * 0.45),
+        scale: leafScale(s, rand),
         rotation: new Vector3(rand() * 6.28, rand() * 6.28, rand() * 6.28),
         color: LEAF_COLORS[Math.floor(rand() * LEAF_COLORS.length)],
       });
@@ -318,7 +348,7 @@ export function CitrusTree({ position, scale = 1, seed = 5 }: { position: Vec3; 
         <meshStandardMaterial color="#2c4a1c" roughness={0.9} />
       </mesh>
       <BlobCloud blobs={leaves} wind={0.008} />
-      <BlobCloud blobs={fruit} wind={0.006} />
+      <BlobCloud blobs={fruit} wind={0.006} geometry={blobGeometry} />
     </group>
   );
 }
@@ -330,14 +360,14 @@ export function FloweringShrub({ position, scale = 1, seed = 9 }: { position: Ve
     const leaves: Blob[] = [];
     const blossoms: Blob[] = [];
     const center = new Vector3(0, POT_RIM.urn + 0.28, 0);
-    for (let i = 0; i < 260; i++) {
+    for (let i = 0; i < 420; i++) {
       const dir = new Vector3(rand() * 2 - 1, rand() * 1.2 - 0.3, rand() * 2 - 1).normalize();
       const p = center.clone().addScaledVector(dir, 0.5 * (0.6 + rand() * 0.45));
       const isBlossom = dir.y > -0.1 && rand() < 0.42;
-      const s = isBlossom ? 0.045 + rand() * 0.03 : 0.05 + rand() * 0.04;
+      const s = isBlossom ? 0.045 + rand() * 0.03 : 0.045 + rand() * 0.03;
       (isBlossom ? blossoms : leaves).push({
         position: p,
-        scale: new Vector3(s * 1.3, s, s * 0.6),
+        scale: isBlossom ? bractScale(s, rand) : leafScale(s, rand),
         rotation: new Vector3(rand() * 6.28, rand() * 6.28, rand() * 6.28),
         color: isBlossom
           ? BLOSSOM_COLORS[Math.floor(rand() * BLOSSOM_COLORS.length)]
@@ -351,7 +381,61 @@ export function FloweringShrub({ position, scale = 1, seed = 9 }: { position: Ve
     <group position={position} scale={scale}>
       <CarvedPot position={[0, 0, 0]} />
       <BlobCloud blobs={leaves} wind={0.008} />
-      <BlobCloud blobs={blossoms} wind={0.014} />
+      <BlobCloud blobs={blossoms} wind={0.014} geometry={bractGeometry} />
+    </group>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Olive tree
+
+const OLIVE_COLORS = ["#7f9a62", "#93a874", "#6c8752", "#a3b38a", "#5f7a48"];
+
+/** Multi-stemmed olive in a planter: open, airy crown of narrow silver-green leaves. */
+export function OliveTree({ position, scale = 1, seed = 7 }: { position: Vec3; scale?: number; seed?: number }) {
+  const leaves = useMemo(() => {
+    const rand = mulberry32(seed);
+    const lobes = [
+      new Vector3(-0.35, 2.35, 0.1),
+      new Vector3(0.4, 2.55, -0.15),
+      new Vector3(0.05, 3.0, 0.2),
+    ];
+    const out: Blob[] = [];
+    for (let i = 0; i < 1100; i++) {
+      const lobe = lobes[i % lobes.length];
+      const dir = new Vector3(rand() * 2 - 1, (rand() * 2 - 1) * 0.7, rand() * 2 - 1).normalize();
+      const s = 0.05 + rand() * 0.025;
+      out.push({
+        position: lobe.clone().addScaledVector(dir, 0.62 * (0.45 + rand() * 0.6)),
+        scale: new Vector3(s * 0.38, s * 1.7, 1),
+        rotation: new Vector3(rand() * 6.28, rand() * 6.28, rand() * 6.28),
+        color: OLIVE_COLORS[Math.floor(rand() * OLIVE_COLORS.length)],
+      });
+    }
+    return out;
+  }, [seed]);
+
+  return (
+    <group position={position} scale={scale}>
+      <CarvedPot position={[0, 0, 0]} shape="planter" scale={1.35} />
+      {(
+        [
+          [-0.12, 1.5, 0.02, 0.22],
+          [0.14, 1.6, -0.05, -0.2],
+          [0.0, 1.8, 0.06, 0.05],
+        ] as const
+      ).map(([x, h, z, tilt], i) => (
+        <mesh key={i} position={[x, 0.9 + h / 2 - 0.2, z]} rotation-z={tilt} castShadow>
+          <cylinderGeometry args={[0.035, 0.06, h, 7]} />
+          <meshStandardMaterial color="#6b5a46" roughness={0.95} />
+        </mesh>
+      ))}
+      {/* Sparse inner volume so the airy crown still casts dappled shade. */}
+      <mesh position={[0, 2.6, 0]} scale={[0.85, 0.6, 0.8]} castShadow>
+        <icosahedronGeometry args={[1, 1]} />
+        <meshStandardMaterial color="#56703f" roughness={0.9} transparent opacity={0} depthWrite={false} />
+      </mesh>
+      <BlobCloud blobs={leaves} wind={0.01} />
     </group>
   );
 }

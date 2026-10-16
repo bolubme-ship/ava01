@@ -2,7 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { PerspectiveCamera, Vector3 } from "three";
+import { MathUtils, Object3D, PerspectiveCamera, SpotLight, Vector3 } from "three";
 import { CAMERA_STATIONS } from "../config";
 import type { ScrollProgress } from "../hooks/useScrollProgress";
 import { createCameraPath, snapToStation } from "./cameraPath";
@@ -30,12 +30,21 @@ interface CameraRigProps {
   reducedMotion: boolean;
 }
 
-/** Drives the default camera along the scroll-linked path every frame. */
+/**
+ * Drives the default camera along the scroll-linked path every frame, and
+ * carries a soft "exhibition" spotlight that hangs above and in front of
+ * whatever the camera is framing. It fades out for wide shots (the hero),
+ * so only close framings of a look are lit. One light for the whole walk.
+ */
 export function CameraRig({ progress, reducedMotion }: CameraRigProps) {
   const path = useMemo(() => createCameraPath(CAMERA_STATIONS), []);
   const position = useRef(new Vector3());
   const target = useRef(new Vector3());
   const right = useRef(new Vector3());
+  const spot = useRef<SpotLight>(null);
+  const spotTarget = useMemo(() => new Object3D(), []);
+  const subject = useRef(new Vector3());
+  const toCamera = useRef(new Vector3());
 
   useFrame(({ camera, clock, size }) => {
     const lens = camera as PerspectiveCamera;
@@ -43,6 +52,7 @@ export function CameraRig({ progress, reducedMotion }: CameraRigProps) {
     const raw = progress.current.value;
     const t = reducedMotion ? snapToStation(raw, path.segments) : raw;
     const lensScale = path.sample(t, position.current, target.current);
+    subject.current.copy(target.current);
 
     const fov = Math.min(fovForAspect(aspect) * lensScale, MAX_FOV);
     if (Math.abs(lens.fov - fov) > 1e-3) {
@@ -62,7 +72,31 @@ export function CameraRig({ progress, reducedMotion }: CameraRigProps) {
 
     lens.position.copy(position.current);
     lens.lookAt(target.current);
+
+    const light = spot.current;
+    if (light) {
+      const distance = subject.current.distanceTo(position.current);
+      toCamera.current.subVectors(position.current, subject.current).setY(0).normalize();
+      light.position.copy(subject.current).addScaledVector(toCamera.current, 1.6).setY(subject.current.y + 2.6);
+      spotTarget.position.copy(subject.current).setY(subject.current.y - 0.2);
+      spotTarget.updateMatrixWorld();
+      light.intensity = 26 * (1 - MathUtils.smoothstep(distance, 6.5, 9));
+    }
   });
 
-  return null;
+  return (
+    <>
+      <primitive object={spotTarget} />
+      <spotLight
+        ref={spot}
+        target={spotTarget}
+        color="#ffe3bd"
+        intensity={0}
+        distance={8}
+        angle={0.42}
+        penumbra={0.85}
+        decay={2}
+      />
+    </>
+  );
 }

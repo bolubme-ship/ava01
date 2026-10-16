@@ -15,6 +15,14 @@ export interface ArchOpening {
   sill?: number;
 }
 
+export interface ArchTrim {
+  /** Width of the moulding band around each opening. */
+  width: number;
+  color: string;
+  /** How far the band stands proud of the wall face. */
+  depth?: number;
+}
+
 interface ArchedWallProps {
   width: number;
   height: number;
@@ -23,6 +31,27 @@ interface ArchedWallProps {
   color: string;
   position?: Vec3;
   rotationY?: number;
+  /** Optional raised moulding framing every opening, on both faces. */
+  trim?: ArchTrim;
+}
+
+/**
+ * Horseshoe-shaped band around an arched opening: up the outer jamb, over
+ * the outer arc, down to the opening and back under the inner arc. A single
+ * simple polygon, so it extrudes cleanly.
+ */
+export function archBandShape(x: number, bottom: number, radius: number, spring: number, band: number): Shape {
+  const s = new Shape();
+  s.moveTo(x - radius - band, bottom);
+  s.lineTo(x - radius - band, spring);
+  s.absarc(x, spring, radius + band, Math.PI, 0, true);
+  s.lineTo(x + radius + band, bottom);
+  s.lineTo(x + radius, bottom);
+  s.lineTo(x + radius, spring);
+  s.absarc(x, spring, radius, 0, Math.PI, false);
+  s.lineTo(x - radius, bottom);
+  s.closePath();
+  return s;
 }
 
 /**
@@ -38,6 +67,7 @@ export function ArchedWall({
   color,
   position = [0, 0, 0],
   rotationY = 0,
+  trim,
 }: ArchedWallProps) {
   const geometry = useMemo(() => {
     const half = width / 2;
@@ -77,18 +107,35 @@ export function ArchedWall({
     return geo;
   }, [width, height, depth, openings]);
 
+  const trimGeometry = useMemo(() => {
+    if (!trim) return null;
+    const trimDepth = trim.depth ?? 0.07;
+    const shapes = openings.map((o) => {
+      const r = o.width / 2;
+      const bottom = o.sill ?? 0;
+      return archBandShape(o.x, bottom, r, bottom + o.height - r, trim.width);
+    });
+    const geo = new ExtrudeGeometry(shapes, { depth: trimDepth, bevelEnabled: false, curveSegments: 24 });
+    return { geo, trimDepth };
+  }, [trim, openings]);
+
   // Extrude UVs are in metres, so this tiles the grain every ~4m.
   const texture = useSurfaceTexture(0.25);
 
   return (
-    <mesh geometry={geometry} position={position} rotation-y={rotationY} castShadow receiveShadow>
-      <meshStandardMaterial
-        color={color}
-        map={texture}
-        bumpMap={texture}
-        bumpScale={2}
-        roughness={0.95}
-      />
-    </mesh>
+    <group position={position} rotation-y={rotationY}>
+      <mesh geometry={geometry} castShadow receiveShadow>
+        <meshStandardMaterial color={color} map={texture} bumpMap={texture} bumpScale={2.5} roughness={0.95} />
+      </mesh>
+      {trim && trimGeometry && (
+        <>
+          {[depth / 2 - 0.005, -depth / 2 - trimGeometry.trimDepth + 0.005].map((z) => (
+            <mesh key={z} geometry={trimGeometry.geo} position={[0, 0, z]} castShadow receiveShadow>
+              <meshStandardMaterial color={trim.color} map={texture} bumpMap={texture} bumpScale={1.5} roughness={0.9} />
+            </mesh>
+          ))}
+        </>
+      )}
+    </group>
   );
 }

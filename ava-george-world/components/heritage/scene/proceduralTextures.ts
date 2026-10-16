@@ -38,20 +38,94 @@ function speckle(ctx: CanvasRenderingContext2D, w: number, h: number, rand: () =
   }
 }
 
-/** Pale limestone floor: a 4×4 grid of slightly varied tiles with grout. */
+/**
+ * Limestone flags in running-bond courses: uneven widths, per-stone tint,
+ * worn centres, darker bevelled joints with a sunlit top edge, and stains.
+ * Tiles seamlessly (course lengths are chosen to fill the width exactly).
+ */
 const stoneTiles: Painter = (ctx, w, h, rand) => {
-  const n = 4;
-  const s = w / n;
-  ctx.fillStyle = "#d7b892";
+  ctx.fillStyle = "#b99a76"; // joints
   ctx.fillRect(0, 0, w, h);
-  for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n; j++) {
-      const l = 85 + rand() * 6;
-      ctx.fillStyle = `hsl(${30 + rand() * 6}, ${52 + rand() * 12}%, ${l}%)`;
-      ctx.fillRect(i * s + 3, j * s + 3, s - 6, s - 6);
+  const courses = 6;
+  const ch = h / courses;
+  for (let c = 0; c < courses; c++) {
+    const y = c * ch;
+    // Split the course into 3–5 stones that exactly span the width.
+    const n = 3 + Math.floor(rand() * 3);
+    const weights = Array.from({ length: n }, () => 0.6 + rand());
+    const total = weights.reduce((a, b) => a + b, 0);
+    let x = (rand() * w) / n; // stagger; stones wrap around the edge
+    for (const wt of weights) {
+      const sw = (wt / total) * w;
+      const hue = 30 + rand() * 8;
+      const sat = 32 + rand() * 18;
+      const lit = 80 + rand() * 9;
+      const draw = (ox: number) => {
+        const x0 = x + ox + 3;
+        const y0 = y + 3;
+        const ww = sw - 6;
+        const hh = ch - 6;
+        ctx.fillStyle = `hsl(${hue}, ${sat}%, ${lit}%)`;
+        ctx.fillRect(x0, y0, ww, hh);
+        // Worn, slightly lighter centre.
+        const g = ctx.createRadialGradient(x0 + ww / 2, y0 + hh / 2, 0, x0 + ww / 2, y0 + hh / 2, Math.max(ww, hh) * 0.6);
+        g.addColorStop(0, "rgba(255,248,236,0.18)");
+        g.addColorStop(1, "rgba(120,80,50,0.12)");
+        ctx.fillStyle = g;
+        ctx.fillRect(x0, y0, ww, hh);
+        // Bevel: lit top-left edge, shaded bottom-right edge.
+        ctx.fillStyle = "rgba(255,250,240,0.35)";
+        ctx.fillRect(x0, y0, ww, 2);
+        ctx.fillRect(x0, y0, 2, hh);
+        ctx.fillStyle = "rgba(90,55,30,0.28)";
+        ctx.fillRect(x0, y0 + hh - 2, ww, 2);
+        ctx.fillRect(x0 + ww - 2, y0, 2, hh);
+      };
+      draw(0);
+      draw(-w); // wrap the stone that crosses the right edge
+      x += sw;
     }
   }
-  speckle(ctx, w, h, rand, 9000, 0.12);
+  // Stains and patina.
+  for (let i = 0; i < 70; i++) {
+    const x = rand() * w;
+    const y = rand() * h;
+    const r = 8 + rand() * 40;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${rand() > 0.5 ? "120,80,50" : "255,245,230"},${0.05 + rand() * 0.08})`);
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  speckle(ctx, w, h, rand, 30000, 0.14);
+};
+
+/** Honed cream marble with faint grey-gold veining, for display plinths. */
+const marble: Painter = (ctx, w, h, rand) => {
+  ctx.fillStyle = "#f4efe6";
+  ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < 30; i++) {
+    const g = ctx.createRadialGradient(rand() * w, rand() * h, 0, rand() * w, rand() * h, 40 + rand() * 120);
+    g.addColorStop(0, "rgba(230,215,195,0.25)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+  for (let v = 0; v < 9; v++) {
+    let x = rand() * w;
+    let y = 0;
+    ctx.strokeStyle = `rgba(${rand() > 0.5 ? "160,145,130" : "190,160,110"},${0.18 + rand() * 0.2})`;
+    ctx.lineWidth = 0.6 + rand() * 1.6;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    while (y < h) {
+      x += (rand() - 0.5) * 26;
+      y += 6 + rand() * 18;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  speckle(ctx, w, h, rand, 6000, 0.08);
 };
 
 /** Red runner rug with cream / dark borders and a column of diamond medallions. */
@@ -123,7 +197,7 @@ const rug: Painter = (ctx, w, h, rand) => {
 
 /** Kilim-style wall hanging: deep red field with a lattice of stepped diamonds. */
 const kilim: Painter = (ctx, w, h, rand) => {
-  ctx.fillStyle = "#9c2b22";
+  ctx.fillStyle = "#b3261e";
   ctx.fillRect(0, 0, w, h);
   ctx.fillStyle = "#e7cfa2";
   ctx.fillRect(0, 0, w, 14);
@@ -208,10 +282,11 @@ const cloud: Painter = (ctx, w, h, rand) => {
 };
 
 const PAINTERS = {
-  stoneTiles: [512, 512, stoneTiles],
+  stoneTiles: [1024, 1024, stoneTiles],
   rug: [256, 1024, rug],
   kilim: [256, 512, kilim],
   carvedClay: [512, 256, carvedClay],
+  marble: [512, 512, marble],
   cloud: [256, 128, cloud],
 } as const;
 
@@ -225,4 +300,93 @@ export function useProceduralTexture(name: ProceduralTextureName, repeatX = 1, r
     tex.repeat.set(repeatX, repeatY);
     return tex;
   }, [name, repeatX, repeatY]);
+}
+
+// ---------------------------------------------------------------------------
+// Embroidered fabric (one texture per colourway)
+
+/**
+ * Woven fabric in `base` with embroidery in `thread`: a scalloped hem band of
+ * stepped diamonds and dots, a vine of small flowers above it, a beaded
+ * waist band and a scatter of tiny motifs over the skirt. The texture is laid
+ * out for LatheGeometry UVs: u runs around the garment, v from hem (0) to
+ * neck (1). `hemV`/`waistV` place the bands.
+ */
+function paintEmbroidery(base: string, thread: string, hemV: number, waistV: number): CanvasTexture {
+  const key = `fabric:${base}:${thread}:${hemV}:${waistV}`;
+  return paint(key, 1024, 512, (ctx, w, h, rand) => {
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, w, h);
+    // Weave: fine cross-hatch.
+    for (let y = 0; y < h; y += 2) {
+      ctx.fillStyle = `rgba(0,0,0,${0.03 + rand() * 0.03})`;
+      ctx.fillRect(0, y, w, 1);
+    }
+    for (let x = 0; x < w; x += 2) {
+      ctx.fillStyle = `rgba(255,255,255,${0.02 + rand() * 0.02})`;
+      ctx.fillRect(x, 0, 1, h);
+    }
+    const Y = (v: number) => h - v * h; // canvas y for a v coordinate
+    ctx.fillStyle = thread;
+    ctx.strokeStyle = thread;
+
+    // Hem band: two rules with stepped diamonds between.
+    const hemY = Y(hemV);
+    ctx.fillRect(0, hemY - 4, w, 3);
+    ctx.fillRect(0, hemY - 30, w, 2);
+    for (let x = 12; x < w; x += 28) {
+      ctx.beginPath();
+      ctx.moveTo(x, hemY - 26);
+      ctx.lineTo(x + 8, hemY - 17);
+      ctx.lineTo(x, hemY - 8);
+      ctx.lineTo(x - 8, hemY - 17);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + 14, hemY - 17, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Flower vine above the hem.
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let x = 0; x <= w; x += 4) ctx.lineTo(x, hemY - 52 + Math.sin(x / 18) * 6);
+    ctx.stroke();
+    for (let x = 18; x < w; x += 36) {
+      const y = hemY - 52 + Math.sin(x / 18) * 6 - 10;
+      for (let p = 0; p < 5; p++) {
+        const a = (p / 5) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(a) * 4, y + Math.sin(a) * 4, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // Beaded waist band.
+    const waistY = Y(waistV);
+    ctx.fillRect(0, waistY - 2, w, 2);
+    ctx.fillRect(0, waistY + 8, w, 2);
+    for (let x = 6; x < w; x += 10) {
+      ctx.beginPath();
+      ctx.arc(x, waistY + 4, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Scattered motifs on the skirt.
+    for (let i = 0; i < 70; i++) {
+      const x = rand() * w;
+      const y = waistY + 24 + rand() * (hemY - 90 - waistY - 24);
+      ctx.globalAlpha = 0.75;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 4);
+      ctx.lineTo(x + 3, y);
+      ctx.lineTo(x, y + 4);
+      ctx.lineTo(x - 3, y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  });
+}
+
+/** Embroidered fabric texture for a garment colourway. */
+export function useFabricTexture(base: string, thread: string, hemV = 0.06, waistV = 0.58): Texture {
+  return useMemo(() => paintEmbroidery(base, thread, hemV, waistV), [base, thread, hemV, waistV]);
 }

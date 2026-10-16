@@ -1,10 +1,12 @@
 "use client";
 
+import { useMemo } from "react";
 import { Instance, Instances } from "@react-three/drei";
-import { COURTYARD, GATE, HALL, PALETTE, type Vec3 } from "../config";
-import { ArchedWall, type ArchOpening } from "./ArchedWall";
+import { ExtrudeGeometry, Shape, ShapeGeometry } from "three";
+import { COURTYARD, GATE, HALL, PALETTE, PEDESTALS, type Vec3 } from "../config";
+import { ArchedWall, archBandShape, type ArchOpening, type ArchTrim } from "./ArchedWall";
 import { CanopySail, Kilim, WallSconce } from "./Fabrics";
-import { Bougainvillea, CarvedPot, CitrusTree, FloweringShrub, PottedPlant } from "./Planting";
+import { Bougainvillea, CarvedPot, CitrusTree, FloweringShrub, OliveTree, PottedPlant } from "./Planting";
 import { useProceduralTexture } from "./proceduralTextures";
 import { useSurfaceTexture } from "./surfaceTexture";
 
@@ -37,12 +39,15 @@ const BACK_OPENINGS: ArchOpening[] = [
   { x: 0, width: 1.2, height: 1.4, sill: 5.2 },
   { x: 5, width: 1, height: 1.5, sill: 4.4 },
 ];
-const SIDE_OPENINGS: ArchOpening[] = [-6, 6].map((x) => ({
-  x,
-  width: 1.1,
-  height: 1.6,
-  sill: 2.2,
-}));
+/* Only the back-half window remains; the front half has blind niches instead. */
+const SIDE_OPENINGS: ArchOpening[] = [{ x: 6, width: 1.1, height: 1.6, sill: 2.2 }];
+
+/** Raised mouldings framing every arch. */
+const GATE_TRIM: ArchTrim = { width: 0.42, color: PALETTE.wallTrim, depth: 0.1 };
+const WALL_TRIM: ArchTrim = { width: 0.22, color: PALETTE.wallTrim };
+
+/** Blind arched niches down the front half of each side wall (world z). */
+const NICHE_Z = [9.9, 6.9, 3.9];
 
 /** Front wall runs either side of the gatehouse. */
 const FRONT_SEGMENT_WIDTH = HALF_X + WALL_DEPTH / 2 - GATE.towerHalfWidth;
@@ -62,8 +67,9 @@ function onGateArch(radius: number, degrees: number, z = GATE_FACE_Z + 0.02): Ve
 }
 
 function Ground() {
-  const tiles = useProceduralTexture("stoneTiles", 48, 48);
+  const tiles = useProceduralTexture("stoneTiles", 30, 30);
   const rug = useProceduralTexture("rug", 1, 2.6);
+  const sideRug = useProceduralTexture("rug", 1, 0.32);
   const rugStart = GATE_FACE_Z + 1.4;
   const rugEnd = -HALF_Z + 0.4;
   const rugLength = rugStart - rugEnd;
@@ -71,8 +77,15 @@ function Ground() {
     <group>
       <mesh rotation-x={-Math.PI / 2} receiveShadow>
         <planeGeometry args={[120, 120]} />
-        <meshStandardMaterial map={tiles} roughness={0.7} />
+        <meshStandardMaterial map={tiles} bumpMap={tiles} bumpScale={1.2} roughness={0.72} />
       </mesh>
+      {/* Smaller rugs either side of the entrance, as in a lived-in courtyard. */}
+      {[-1, 1].map((side) => (
+        <mesh key={side} position={[side * 6.4, 0.01, 8.6]} rotation-y={side * 0.06} receiveShadow>
+          <boxGeometry args={[2.2, 0.014, 3.4]} />
+          <meshStandardMaterial map={sideRug} roughness={0.95} />
+        </mesh>
+      ))}
       {/* Red runner from just outside the gate to the hall doorway. */}
       <mesh position={[0, 0.012, (rugStart + rugEnd) / 2]} receiveShadow>
         <boxGeometry args={[3, 0.02, rugLength]} />
@@ -94,6 +107,7 @@ function Walls() {
         openings={GATE_OPENINGS}
         color={PALETTE.wallLight}
         position={[0, 0, HALF_Z]}
+        trim={GATE_TRIM}
       />
       {[-1, 1].map((side) => (
         <ArchedWall
@@ -110,6 +124,7 @@ function Walls() {
         openings={BACK_OPENINGS}
         color={PALETTE.wallWarm}
         position={[0, 0, -HALF_Z]}
+        trim={WALL_TRIM}
       />
       {[-1, 1].map((side) => (
         <ArchedWall
@@ -120,6 +135,7 @@ function Walls() {
           color={PALETTE.wallLight}
           position={[side * HALF_X, 0, 0]}
           rotationY={Math.PI / 2}
+          trim={WALL_TRIM}
         />
       ))}
 
@@ -276,6 +292,56 @@ const CLIMBERS: {
     strands: 4,
     seed: 13,
   },
+  // Down the jambs of the gate passage (framing the Display One view).
+  {
+    path: [
+      [-GATE.halfWidth + 0.02, 0.5, HALF_Z + 0.5],
+      [-GATE.halfWidth + 0.02, 3.2, HALF_Z + 0.1],
+      [-GATE.halfWidth + 0.3, 5.4, HALF_Z + 0.4],
+    ],
+    normal: [1, 0, 0],
+    spread: 0.45,
+    density: 34,
+    strands: 6,
+    seed: 17,
+  },
+  // Cascading over the tops of the side walls.
+  {
+    path: [
+      [-HALF_X + 0.32, 5.1, 11.6],
+      [-HALF_X + 0.32, 5.0, 8.0],
+      [-HALF_X + 0.32, 5.1, 4.5],
+    ],
+    normal: [1, 0, 0],
+    spread: 0.55,
+    density: 34,
+    strands: 12,
+    seed: 18,
+  },
+  {
+    path: [
+      [HALF_X - 0.32, 5.1, 11.6],
+      [HALF_X - 0.32, 5.0, 8.4],
+      [HALF_X - 0.32, 5.1, 5.6],
+    ],
+    normal: [-1, 0, 0],
+    spread: 0.55,
+    density: 34,
+    strands: 12,
+    seed: 19,
+  },
+  {
+    path: [
+      [-9.6, 5.6, -HALF_Z + 0.32],
+      [-8.0, 6.9, -HALF_Z + 0.32],
+      [-6.0, 7.1, -HALF_Z + 0.32],
+    ],
+    normal: [0, 0, 1],
+    spread: 0.5,
+    density: 30,
+    strands: 6,
+    seed: 20,
+  },
   // Inside the courtyard.
   {
     path: [
@@ -323,6 +389,53 @@ function Climbers() {
   );
 }
 
+/**
+ * Blind arched niches on the inner face of each side wall: a shaded recess
+ * panel framed by a raised moulding, with a lantern between each pair.
+ */
+function BlindNiches() {
+  const { recess, band } = useMemo(() => {
+    const r = 0.75;
+    const spring = 2.35;
+    const recessShape = new Shape();
+    recessShape.moveTo(-r, 0.25);
+    recessShape.lineTo(-r, spring);
+    recessShape.absarc(0, spring, r, Math.PI, 0, true);
+    recessShape.lineTo(r, 0.25);
+    recessShape.closePath();
+    return {
+      recess: new ShapeGeometry(recessShape, 20),
+      band: new ExtrudeGeometry(archBandShape(0, 0.25, r, spring, 0.16), { depth: 0.06, bevelEnabled: false, curveSegments: 20 }),
+    };
+  }, []);
+  const face = HALF_X - WALL_DEPTH / 2;
+
+  return (
+    <group>
+      {[-1, 1].map((side) =>
+        NICHE_Z.map((z) => (
+          <group key={`${side}${z}`} position={[-side * face, 0, z]} rotation-y={(side * Math.PI) / 2}>
+            <mesh geometry={recess} position={[0, 0, 0.006]} receiveShadow>
+              <meshStandardMaterial color={PALETTE.niche} roughness={0.95} />
+            </mesh>
+            <mesh geometry={band} castShadow receiveShadow>
+              <meshStandardMaterial color={PALETTE.wallTrim} roughness={0.9} />
+            </mesh>
+          </group>
+        )),
+      )}
+      {[-1, 1].map((side) =>
+        [8.4, 5.4].map((z) => (
+          <WallSconce key={`l${side}${z}`} position={[-side * (face + 0.01), 2.9, z]} rotationY={(side * Math.PI) / 2} />
+        )),
+      )}
+    </group>
+  );
+}
+
+/** The looks displayed in the courtyard (each gets planting beside it). */
+const COURTYARD_LOOKS = PEDESTALS.filter((p) => p.zone === "courtyard");
+
 /** Trees, shrubs and carved pots placed clear of the looks and camera sightlines. */
 function Garden() {
   return (
@@ -333,47 +446,59 @@ function Garden() {
       <CarvedPot position={[3.4, 0, 15.5]} scale={1.5} />
       <PottedPlant position={[4.6, 0, 14.3]} scale={1.15} seed={23} />
 
-      {/* Citrus trees down both sides and flanking the back wall. */}
-      <CitrusTree position={[-7.1, 0, -9.6]} seed={31} />
-      <CitrusTree position={[7.1, 0, -9.6]} seed={32} />
-      <CitrusTree position={[-7.7, 0, 3.6]} scale={0.95} seed={33} />
-      <CitrusTree position={[7.7, 0, 0.4]} scale={0.95} seed={34} />
+      {/* Olive trees in front of the side doors, flanking the hall archway. */}
+      <OliveTree position={[-4.8, 0, -10.6]} seed={31} />
+      <OliveTree position={[4.8, 0, -10.6]} seed={32} />
+      {/* Citrus trees part-way down each side. */}
+      <CitrusTree position={[-7.7, 0, 1.0]} scale={0.95} seed={33} />
+      <CitrusTree position={[7.7, 0, -2.6]} scale={0.95} seed={34} />
 
-      {/* Flowering shrubs and urns. */}
+      {/* Flowering pots and greenery beside every courtyard display. */}
+      {COURTYARD_LOOKS.map((p, i) => {
+        const [x, , z] = p.position;
+        const out = Math.sign(x);
+        return (
+          <group key={p.id}>
+            <FloweringShrub position={[x + out * 1.35, 0, z - 0.55]} scale={0.78} seed={50 + i} />
+            <PottedPlant position={[x + out * 1.2, 0, z + 0.95]} scale={0.72} seed={60 + i} />
+          </group>
+        );
+      })}
+
+      {/* Flowering shrubs and urns along the walls. */}
       <FloweringShrub position={[-2.75, 0, -11.2]} scale={0.85} seed={41} />
       <FloweringShrub position={[2.75, 0, -11.2]} scale={0.85} seed={42} />
-      <FloweringShrub position={[-8.8, 0, 10.6]} seed={43} />
-      <FloweringShrub position={[8.9, 0, -5.8]} scale={0.9} seed={44} />
+      <FloweringShrub position={[-8.8, 0, 11.0]} seed={43} />
+      <FloweringShrub position={[8.9, 0, -6.6]} scale={0.9} seed={44} />
       <CarvedPot position={[-9.1, 0, -11.2]} scale={1.3} />
       <CarvedPot position={[-8.3, 0, -11.5]} scale={0.9} />
-      <CarvedPot position={[9.1, 0, 10.7]} scale={1.2} />
-      <CarvedPot position={[-9.1, 0, -1]} scale={1.1} />
-      <PottedPlant position={[9.0, 0, 3.2]} scale={1.1} seed={45} />
+      <CarvedPot position={[9.1, 0, -11.2]} scale={1.3} />
+      <CarvedPot position={[9.1, 0, 11.0]} scale={1.2} />
       <PottedPlant position={[-9.0, 0, -7.2]} scale={1.1} seed={46} />
     </group>
   );
 }
 
-/** Canopy sails across the back half of the courtyard, hangings and lanterns. */
+/** Canopy sails across the courtyard, patterned banners and lanterns. */
 function Furnishings() {
   const backFace = -HALF_Z + WALL_DEPTH / 2 + 0.01;
   const sideFace = HALF_X - WALL_DEPTH / 2 - 0.01;
   return (
     <group>
-      <CanopySail position={[0, 5.55, -2.6]} width={HALF_X * 2} depth={3.4} sag={1.05} color={PALETTE.canopyCream} rotationY={0.05} />
-      <CanopySail position={[0, 5.75, -5.7]} width={HALF_X * 2} depth={2.2} sag={0.8} color={PALETTE.canopyRed} rotationY={-0.06} phase={1.3} />
-      <CanopySail position={[0, 5.6, -8.5]} width={HALF_X * 2} depth={2.8} sag={0.95} color={PALETTE.canopyCream} rotationY={0.04} phase={2.4} />
+      {/* Cream and red sails crossing over the front, cream and terracotta further back. */}
+      <CanopySail position={[0, 6.0, 7.2]} width={HALF_X * 2} depth={3.8} sag={1.3} color={PALETTE.canopyCream} rotationY={0.13} phase={0.6} />
+      <CanopySail position={[0, 6.1, 3.9]} width={HALF_X * 2} depth={2.3} sag={1.1} color={PALETTE.canopyRed} rotationY={-0.17} phase={2.0} />
+      <CanopySail position={[0, 5.6, -2.4]} width={HALF_X * 2} depth={3.4} sag={1.05} color={PALETTE.canopyCream} rotationY={0.05} />
+      <CanopySail position={[0, 5.75, -6.2]} width={HALF_X * 2} depth={2.6} sag={0.9} color={PALETTE.canopyTerracotta} rotationY={-0.07} phase={1.3} />
 
-      {/* Kilims flank the hall doorway; more hang on the side walls. */}
-      <Kilim position={[-3.1, 5.0, backFace]} phase={0.4} />
-      <Kilim position={[3.1, 5.0, backFace]} phase={1.7} />
-      <Kilim position={[-sideFace, 4.7, 0.5]} rotationY={Math.PI / 2} width={1.2} height={2.5} phase={2.2} />
-      <Kilim position={[sideFace, 4.7, -1.8]} rotationY={-Math.PI / 2} width={1.2} height={2.5} phase={0.9} />
+      {/* Tall banners flank the hall doorway; more hang on the side walls. */}
+      <Kilim position={[-3.1, 6.3, backFace]} width={1.25} height={3.0} phase={0.4} />
+      <Kilim position={[3.1, 6.3, backFace]} width={1.25} height={3.0} phase={1.7} />
+      <Kilim position={[-sideFace, 4.7, -0.6]} rotationY={Math.PI / 2} width={1.2} height={2.5} phase={2.2} />
+      <Kilim position={[sideFace, 4.7, 0.6]} rotationY={-Math.PI / 2} width={1.2} height={2.5} phase={0.9} />
 
-      <WallSconce position={[-2.25, 3.0, backFace]} />
-      <WallSconce position={[2.25, 3.0, backFace]} />
-      <WallSconce position={[-sideFace, 3.0, 3.6]} rotationY={Math.PI / 2} />
-      <WallSconce position={[sideFace, 3.0, 4.2]} rotationY={-Math.PI / 2} />
+      <WallSconce position={[-2.35, 3.2, backFace]} />
+      <WallSconce position={[2.35, 3.2, backFace]} />
     </group>
   );
 }
@@ -387,6 +512,7 @@ export function Courtyard() {
       <Toron />
       <Benches />
       <Climbers />
+      <BlindNiches />
       <Garden />
       <Furnishings />
     </group>

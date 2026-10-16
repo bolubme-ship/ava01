@@ -37,7 +37,9 @@ function drape(geometry: PlaneGeometry, base: Float32Array, width: number, depth
     const v = (2 * z) / depth;
     const droop = -sag * (1 - u * u) - 0.12 * (1 - v * v);
     const billow = Math.sin(time * 0.9 + x * 0.45 + phase) * 0.06 * (1 - u * u);
-    pos.setY(i, droop + billow);
+    // Soft folds running across the span, strongest mid-sail.
+    const folds = Math.sin(x * 1.4 + phase * 2) * 0.07 * (1 - u * u) * (1 - 0.5 * v * v);
+    pos.setY(i, droop + billow + folds);
   }
   pos.needsUpdate = true;
   geometry.computeVertexNormals();
@@ -47,7 +49,7 @@ function drape(geometry: PlaneGeometry, base: Float32Array, width: number, depth
 export function CanopySail({ position, width, depth, sag = 0.9, color, rotationY = 0, phase = 0 }: CanopySailProps) {
   const animate = useAmbientMotion();
   const { geometry, base } = useMemo(() => {
-    const geometry = new PlaneGeometry(width, depth, 32, 8);
+    const geometry = new PlaneGeometry(width, depth, 48, 8);
     geometry.rotateX(-Math.PI / 2);
     const base = Float32Array.from(geometry.attributes.position.array);
     drape(geometry, base, width, depth, sag, 0, phase);
@@ -61,7 +63,7 @@ export function CanopySail({ position, width, depth, sag = 0.9, color, rotationY
   return (
     <mesh geometry={geometry} position={position} rotation-y={rotationY} castShadow receiveShadow>
       {/* Faint self-glow fakes sunlight filtering through the fabric from above. */}
-      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.42} roughness={0.9} side={DoubleSide} />
+      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.3} roughness={0.9} side={DoubleSide} />
     </mesh>
   );
 }
@@ -106,22 +108,59 @@ export function Kilim({ position, rotationY = 0, width = 1.1, height = 2.4, phas
   );
 }
 
-/** Wall-mounted brass lantern with a warm glowing body. */
+const IRON = "#2e2119";
+
+/**
+ * Moroccan-style lantern hanging from a scrolled iron bracket: hexagonal
+ * glowing body with dark frame rings, domed cap and finial. Emissive only,
+ * so any number can be placed without adding lights.
+ */
 export function WallSconce({ position, rotationY = 0 }: { position: Vec3; rotationY?: number }) {
+  const reach = 0.42;
   return (
     <group position={position} rotation-y={rotationY}>
-      <mesh position={[0, 0, 0.08]}>
-        <boxGeometry args={[0.06, 0.06, 0.16]} />
-        <meshStandardMaterial color="#3b2a1d" metalness={0.6} roughness={0.5} />
+      {/* Wall plate, arm and scroll. */}
+      <mesh position={[0, 0, 0.02]}>
+        <boxGeometry args={[0.1, 0.18, 0.04]} />
+        <meshStandardMaterial color={IRON} metalness={0.5} roughness={0.55} />
       </mesh>
-      <mesh position={[0, -0.05, 0.2]} castShadow>
-        <cylinderGeometry args={[0.09, 0.07, 0.32, 6]} />
-        <meshStandardMaterial color="#ffd08a" emissive="#ffb85c" emissiveIntensity={1.6} toneMapped={false} />
+      <mesh position={[0, 0, reach / 2]} rotation-x={Math.PI / 2}>
+        <cylinderGeometry args={[0.014, 0.014, reach, 6]} />
+        <meshStandardMaterial color={IRON} metalness={0.5} roughness={0.55} />
       </mesh>
-      <mesh position={[0, 0.15, 0.2]}>
-        <coneGeometry args={[0.12, 0.12, 6]} />
-        <meshStandardMaterial color="#3b2a1d" metalness={0.6} roughness={0.5} />
+      <mesh position={[0, -0.12, 0.16]} rotation-y={Math.PI / 2}>
+        <torusGeometry args={[0.12, 0.011, 6, 16, Math.PI * 0.75]} />
+        <meshStandardMaterial color={IRON} metalness={0.5} roughness={0.55} />
       </mesh>
+      {/* Chain drop. */}
+      <mesh position={[0, -0.09, reach]}>
+        <cylinderGeometry args={[0.006, 0.006, 0.18, 4]} />
+        <meshStandardMaterial color={IRON} />
+      </mesh>
+      <group position={[0, -0.42, reach]}>
+        <mesh castShadow>
+          <cylinderGeometry args={[0.12, 0.1, 0.34, 6]} />
+          <meshStandardMaterial color="#ffd796" emissive="#ffae4f" emissiveIntensity={2} toneMapped={false} />
+        </mesh>
+        {[0.17, -0.17].map((y) => (
+          <mesh key={y} position={[0, y, 0]} rotation-x={Math.PI / 2}>
+            <torusGeometry args={[y > 0 ? 0.125 : 0.105, 0.016, 6, 6]} />
+            <meshStandardMaterial color={IRON} metalness={0.6} roughness={0.45} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0.26, 0]}>
+          <coneGeometry args={[0.15, 0.16, 6]} />
+          <meshStandardMaterial color={IRON} metalness={0.6} roughness={0.45} />
+        </mesh>
+        <mesh position={[0, 0.37, 0]}>
+          <sphereGeometry args={[0.03, 8, 6]} />
+          <meshStandardMaterial color="#b8893f" metalness={0.8} roughness={0.35} />
+        </mesh>
+        <mesh position={[0, -0.22, 0]} rotation-x={Math.PI}>
+          <coneGeometry args={[0.07, 0.1, 6]} />
+          <meshStandardMaterial color={IRON} metalness={0.6} roughness={0.45} />
+        </mesh>
+      </group>
     </group>
   );
 }
