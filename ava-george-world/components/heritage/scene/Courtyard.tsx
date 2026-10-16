@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Instance, Instances } from "@react-three/drei";
 import { DoubleSide, LatheGeometry, Vector2 } from "three";
-import { PALETTE, type Vec3 } from "../config";
+import { COURTYARD, PALETTE, type Vec3 } from "../config";
 import { ArchedWall, type ArchOpening } from "./ArchedWall";
 import { useSurfaceTexture } from "./surfaceTexture";
 
@@ -14,11 +14,11 @@ import { useSurfaceTexture } from "./surfaceTexture";
  * Everything is primitive geometry so it can be swapped for modelled
  * assets later without touching the camera or scroll code.
  *
- * Courtyard interior spans x ∈ [-10, 10], z ∈ [-12, 12].
+ * Courtyard interior spans x ∈ [-10, 10], z ∈ [-22, 22].
  */
 
-const HALF_X = 10.3;
-const HALF_Z = 12.3;
+const HALF_X = COURTYARD.halfX;
+const HALF_Z = COURTYARD.halfZ;
 const WALL_DEPTH = 0.6;
 const SIDE_HEIGHT = 5;
 const BACK_HEIGHT = 7.2;
@@ -32,10 +32,12 @@ const BACK_OPENINGS: ArchOpening[] = [
   { x: 0, width: 1.2, height: 1.4, sill: 5.2 },
   { x: 5, width: 1, height: 1.5, sill: 4.4 },
 ];
-const SIDE_OPENINGS: ArchOpening[] = [
-  { x: -6, width: 1.1, height: 1.6, sill: 2.2 },
-  { x: 6, width: 1.1, height: 1.6, sill: 2.2 },
-];
+const SIDE_OPENINGS: ArchOpening[] = [-15, -5, 5, 15].map((x) => ({
+  x,
+  width: 1.1,
+  height: 1.6,
+  sill: 2.2,
+}));
 
 function range(from: number, to: number, step: number): number[] {
   const out: number[] = [];
@@ -44,22 +46,23 @@ function range(from: number, to: number, step: number): number[] {
 }
 
 function Ground() {
-  const earth = useSurfaceTexture(20);
-  const tiles = useSurfaceTexture(1, 8);
+  const earth = useSurfaceTexture(30);
+  const tiles = useSurfaceTexture(1, 14);
+  const pathLength = HALF_Z * 2 + 1.4;
   return (
     <group>
       <mesh rotation-x={-Math.PI / 2} receiveShadow>
-        <planeGeometry args={[80, 80]} />
+        <planeGeometry args={[120, 120]} />
         <meshStandardMaterial color={PALETTE.ground} map={earth} roughness={1} />
       </mesh>
       {/* Stone path from the gate to the central doorway. */}
-      <mesh position={[0, 0.015, 0.4]} receiveShadow>
-        <boxGeometry args={[3.2, 0.03, 26]} />
+      <mesh position={[0, 0.015, 0.7]} receiveShadow>
+        <boxGeometry args={[3.2, 0.03, pathLength]} />
         <meshStandardMaterial color={PALETTE.path} map={tiles} roughness={0.9} />
       </mesh>
       {[-1.7, 1.7].map((x) => (
-        <mesh key={x} position={[x, 0.02, 0.4]} receiveShadow>
-          <boxGeometry args={[0.2, 0.04, 26]} />
+        <mesh key={x} position={[x, 0.02, 0.7]} receiveShadow>
+          <boxGeometry args={[0.2, 0.04, pathLength]} />
           <meshStandardMaterial color={PALETTE.clay} roughness={0.9} />
         </mesh>
       ))}
@@ -171,7 +174,7 @@ function Toron() {
     range(-9, 9, 1.5).map((x): Vec3 => [x, y, -HALF_Z + inner + reach]),
   );
   const sides = [-1, 1].flatMap((side) =>
-    range(-10.4, 10.4, 1.6).map((z): Vec3 => [side * (HALF_X - inner - reach), 3.7, z]),
+    range(-HALF_Z + 1.9, HALF_Z - 1.9, 1.6).map((z): Vec3 => [side * (HALF_X - inner - reach), 3.7, z]),
   );
   const front = range(-9, 9, 1.5)
     .filter((x) => Math.abs(x) > 2.6)
@@ -240,13 +243,16 @@ function ClayPots() {
       ),
     [],
   );
+  const back = -HALF_Z + 1;
   const pots: [Vec3, number][] = [
-    [[-8.9, 0, -10.8], 1.35],
-    [[-8.05, 0, -11.15], 0.9],
-    [[-2.3, 0, -11.3], 1],
-    [[2.3, 0, -11.3], 1],
-    [[8.9, 0, 10.6], 1.2],
-    [[-9, 0, 4.4], 1.1],
+    [[-8.9, 0, back + 0.5], 1.35],
+    [[-8.05, 0, back + 0.15], 0.9],
+    [[-2.3, 0, back], 1],
+    [[2.3, 0, back], 1],
+    [[8.9, 0, HALF_Z - 1.7], 1.2],
+    [[-9, 0, 2.6], 1.1],
+    [[9, 0, -14.5], 1.2],
+    [[8.3, 0, -15.1], 0.85],
   ];
   return (
     <group>
@@ -263,8 +269,8 @@ function ClayPots() {
 function Benches() {
   const texture = useSurfaceTexture(2, 0.5);
   const benches: Vec3[] = [
-    [-HALF_X + 0.55, 0.22, -2],
-    [HALF_X - 0.55, 0.22, 6.5],
+    [-HALF_X + 0.55, 0.22, -4.5],
+    [HALF_X - 0.55, 0.22, 13],
   ];
   return (
     <group>
@@ -281,13 +287,13 @@ function Benches() {
 /** Indigo shade cloth stretched from the right wall to two timber poles. */
 function ShadeCloth() {
   const poles: Vec3[] = [
-    [5.2, 2.1, -1],
-    [5.2, 2.1, -6],
+    [6, 2.1, 3.5],
+    [6, 2.1, -1.5],
   ];
   return (
     <group>
-      <mesh position={[7.6, 4.4, -3.5]} rotation={[-Math.PI / 2, -0.12, 0]} castShadow>
-        <planeGeometry args={[4.9, 5.2]} />
+      <mesh position={[8.1, 4.4, 1]} rotation={[-Math.PI / 2, -0.12, 0]} castShadow>
+        <planeGeometry args={[4.3, 5.2]} />
         {/* Faint emissive fakes sunlight glowing through the weave from above. */}
         <meshStandardMaterial
           color={PALETTE.indigoCloth}
@@ -314,7 +320,8 @@ export function Courtyard() {
       <Walls />
       <Silhouette />
       <Toron />
-      <Tree position={[7, 0, -8]} />
+      <Tree position={[7.6, 0, -9.5]} />
+      <Tree position={[-7.6, 0, 9.5]} />
       <ClayPots />
       <Benches />
       <ShadeCloth />

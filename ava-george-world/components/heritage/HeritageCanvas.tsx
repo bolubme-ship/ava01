@@ -21,11 +21,11 @@ export default function HeritageCanvas({ progress, reducedMotion }: HeritageCanv
       shadows="percentage"
       dpr={[1, 1.75]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
-      camera={{ position: CAMERA_STATIONS[0].position, fov: 42, near: 0.1, far: 200 }}
+      camera={{ position: CAMERA_STATIONS[0].position, fov: 42, near: 0.1, far: 260 }}
     >
       <color attach="background" args={[PALETTE.sky]} />
-      <fog attach="fog" args={[PALETTE.sky, 24, 75]} />
-      <SkyDome horizon="#f6d3a2" zenith="#f3e6d0" />
+      <fog attach="fog" args={[PALETTE.sky, 32, 100]} />
+      <SkyDome horizon="#f6d3a2" zenith="#f3e6d0" radius={140} />
 
       <Lighting />
       <Courtyard />
@@ -34,6 +34,7 @@ export default function HeritageCanvas({ progress, reducedMotion }: HeritageCanv
           key={p.id}
           position={p.position}
           rotationY={facingRotation(i)}
+          silhouette={p.silhouette}
           fabric={p.fabric}
           accent={p.accent}
           animate={!reducedMotion}

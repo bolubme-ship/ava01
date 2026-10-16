@@ -8,12 +8,16 @@
 
 export type Vec3 = [number, number, number];
 
+export type Silhouette = "dress" | "tunic";
+
 export interface PedestalConfig {
   id: string;
   position: Vec3;
-  /** Placeholder garment colour (swap for real outfits later). */
+  /** Placeholder shape until the real outfit model is loaded. */
+  silhouette: Silhouette;
+  /** Placeholder garment colour. */
   fabric: string;
-  /** Sash / trim colour on the placeholder garment. */
+  /** Sash, collar or trouser colour on the placeholder. */
   accent: string;
 }
 
@@ -28,26 +32,57 @@ export interface Chapter {
   body: string;
 }
 
-export const PEDESTALS: PedestalConfig[] = [
-  { id: "look-01", position: [-4, 0, 3.5], fabric: "#d9962f", accent: "#8f3b1f" },
-  { id: "look-02", position: [4.2, 0, -2.5], fabric: "#2f4a80", accent: "#e0b45a" },
-  { id: "look-03", position: [0, 0, -8.5], fabric: "#a8432a", accent: "#f0dcb4" },
+/** Interior half-extents of the walled courtyard. */
+export const COURTYARD = { halfX: 10.3, halfZ: 22.3 };
+
+/** Placeholder looks, in visiting order. The last one is the finale at the back. */
+const LOOKS: Omit<PedestalConfig, "id" | "position">[] = [
+  { silhouette: "dress", fabric: "#d9962f", accent: "#8f3b1f" },
+  { silhouette: "tunic", fabric: "#2f4a80", accent: "#e0b45a" },
+  { silhouette: "dress", fabric: "#a8432a", accent: "#f0dcb4" },
+  { silhouette: "tunic", fabric: "#3f6b45", accent: "#e3b23c" },
+  { silhouette: "dress", fabric: "#d9735a", accent: "#3b2a1f" },
+  { silhouette: "tunic", fabric: "#efe3cc", accent: "#8f3b1f" },
+  { silhouette: "dress", fabric: "#6b2f4a", accent: "#e0b45a" },
+  { silhouette: "tunic", fabric: "#c4822f", accent: "#2c3f6b" },
+  { silhouette: "dress", fabric: "#2f6f6f", accent: "#f0dcb4" },
+  { silhouette: "dress", fabric: "#9e2b25", accent: "#e0b45a" },
 ];
+
+/*
+ * Layout: looks zig-zag down either side of the central path, then the
+ * finale stands alone on the path in front of the main archway.
+ */
+const ZIGZAG_X = 3.6;
+const FIRST_Z = 13;
+const SPACING = 3.5;
+
+export const PEDESTALS: PedestalConfig[] = LOOKS.map((look, i) => {
+  const isFinale = i === LOOKS.length - 1;
+  const position: Vec3 = isFinale
+    ? [0, 0, FIRST_Z - SPACING * i]
+    : [i % 2 === 0 ? -ZIGZAG_X : ZIGZAG_X, 0, FIRST_Z - SPACING * i];
+  return { id: `look-${String(i + 1).padStart(2, "0")}`, position, ...look };
+});
 
 /** Height (above the floor) the camera looks at when framing a garment. */
 const GARMENT_FOCUS_Y = 1.3;
 
-const focusOn = (p: PedestalConfig): Vec3 => [p.position[0], GARMENT_FOCUS_Y, p.position[2]];
-
 /**
- * Station 0 is outside the gate; stations 1..3 frame each pedestal.
- * Alternating X offsets give the sideways drift between forward moves.
+ * The camera stands across the path from each side look and a few metres
+ * back, so it crosses left/right between stops while moving forward.
  */
+function stationFor(p: PedestalConfig): CameraStation {
+  const [x, , z] = p.position;
+  const side = Math.sign(x);
+  const position: Vec3 = side === 0 ? [0.9, 1.7, z + 6.1] : [x - side * 2.4, 1.75, z + 5.4];
+  return { position, target: [x, GARMENT_FOCUS_Y, z] };
+}
+
+/** Station 0 is outside the gate; station i + 1 frames pedestal i. */
 export const CAMERA_STATIONS: CameraStation[] = [
-  { position: [0, 2.4, 19], target: [0, 1.9, 0] },
-  { position: [-1.6, 1.75, 8.9], target: focusOn(PEDESTALS[0]) },
-  { position: [1.6, 1.75, 2.6], target: focusOn(PEDESTALS[1]) },
-  { position: [0.9, 1.7, -2.4], target: focusOn(PEDESTALS[2]) },
+  { position: [0, 2.4, COURTYARD.halfZ + 7], target: [0, 1.9, COURTYARD.halfZ - 12] },
+  ...PEDESTALS.map(stationFor),
 ];
 
 /** Y rotation that turns a pedestal's front (+Z) towards the camera that frames it. */
@@ -57,6 +92,8 @@ export function facingRotation(pedestalIndex: number): number {
   return Math.atan2(cam[0] - p[0], cam[2] - p[2]);
 }
 
+const NUMBER_WORDS = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+
 /** One chapter per camera station. Placeholder copy. */
 export const CHAPTERS: Chapter[] = [
   {
@@ -64,21 +101,11 @@ export const CHAPTERS: Chapter[] = [
     title: "The Heritage Collection",
     body: "Scroll to step into the courtyard.",
   },
-  {
-    eyebrow: "Look 01",
-    title: "Display one",
-    body: "Placeholder garment. The first Heritage outfit will stand here.",
-  },
-  {
-    eyebrow: "Look 02",
-    title: "Display two",
-    body: "Placeholder garment. The second Heritage outfit will stand here.",
-  },
-  {
-    eyebrow: "Look 03",
-    title: "Display three",
-    body: "Placeholder garment. The third Heritage outfit will stand here.",
-  },
+  ...PEDESTALS.map((p, i) => ({
+    eyebrow: `Look ${String(i + 1).padStart(2, "0")}`,
+    title: `Display ${NUMBER_WORDS[i]}`,
+    body: `Placeholder ${p.silhouette}. Heritage outfit ${NUMBER_WORDS[i]} will stand here.`,
+  })),
 ];
 
 /** Warm palette shared by the scene. */

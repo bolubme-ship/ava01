@@ -8,7 +8,7 @@ import { useThree } from "@react-three/fiber";
  */
 export function Lighting() {
   const isSmallScreen = useThree((s) => s.size.width < 768);
-  const shadowMapSize = isSmallScreen ? 1024 : 2048;
+  const shadowMapSize = isSmallScreen ? 2048 : 4096;
 
   return (
     <>
@@ -17,15 +17,15 @@ export function Lighting() {
       <directionalLight
         color="#ffd29a"
         intensity={2.8}
-        position={[12, 10, 9]}
+        position={[14, 12, 10]}
         castShadow
         shadow-mapSize={[shadowMapSize, shadowMapSize]}
-        shadow-camera-left={-18}
-        shadow-camera-right={18}
-        shadow-camera-top={18}
-        shadow-camera-bottom={-18}
+        shadow-camera-left={-27}
+        shadow-camera-right={27}
+        shadow-camera-top={27}
+        shadow-camera-bottom={-27}
         shadow-camera-near={1}
-        shadow-camera-far={50}
+        shadow-camera-far={70}
         shadow-bias={-0.0004}
         shadow-normalBias={0.03}
       />
