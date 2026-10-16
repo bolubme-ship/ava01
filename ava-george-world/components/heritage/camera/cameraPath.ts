@@ -5,7 +5,7 @@ import type { CameraStation } from "../config";
  * Remaps linear scroll progress so the camera slows as it reaches each
  * station and glides between them. `strength` 0 = linear, 1 = full stop.
  */
-export function dwellAtStations(progress: number, segments: number, strength = 0.65): number {
+export function dwellAtStations(progress: number, segments: number, strength = 0.8): number {
   const scaled = MathUtils.clamp(progress, 0, 1) * segments;
   const index = Math.min(Math.floor(scaled), segments - 1);
   const local = scaled - index;

@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRef } from "react";
-import { CHAPTERS } from "./config";
+import { CHAPTERS, SCROLL_PER_STOP } from "./config";
 import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
 import { useScrollProgress } from "./hooks/useScrollProgress";
 
@@ -11,8 +11,9 @@ const HeritageCanvas = dynamic(() => import("./HeritageCanvas"), { ssr: false })
 
 /**
  * The Heritage courtyard: a fixed full-screen 3D canvas behind a tall scroll
- * track. Each chapter section is one viewport tall and lines up with one
- * camera station, so the copy and the camera arrive together.
+ * track. Each chapter section spans the scroll distance of one camera stop
+ * (the last is a single screen), so section i starts exactly when the camera
+ * reaches station i. Its copy is pinned while the camera lingers there.
  */
 export function HeritageExperience() {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -34,16 +35,18 @@ export function HeritageExperience() {
         {CHAPTERS.map((chapter, i) => (
           <section
             key={chapter.eyebrow}
-            className="flex h-svh items-end px-4 pb-12 sm:px-10 sm:pb-16 lg:px-16"
+            style={{ height: i === CHAPTERS.length - 1 ? "100svh" : `${SCROLL_PER_STOP * 100}svh` }}
           >
-            <div className="max-w-md text-[#fbf1e1]">
-              <p className="text-xs tracking-[0.3em] uppercase opacity-80">{chapter.eyebrow}</p>
-              {i === 0 ? (
-                <h1 className="mt-3 font-display text-5xl leading-none sm:text-7xl">{chapter.title}</h1>
-              ) : (
-                <h2 className="mt-3 font-display text-4xl leading-none sm:text-5xl">{chapter.title}</h2>
-              )}
-              <p className="mt-4 text-sm leading-relaxed opacity-90 sm:text-base">{chapter.body}</p>
+            <div className="sticky top-0 flex h-svh items-end px-4 pb-12 sm:px-10 sm:pb-16 lg:px-16">
+              <div className="max-w-md text-[#fbf1e1]">
+                <p className="text-xs tracking-[0.3em] uppercase opacity-80">{chapter.eyebrow}</p>
+                {i === 0 ? (
+                  <h1 className="mt-3 font-display text-5xl leading-none sm:text-7xl">{chapter.title}</h1>
+                ) : (
+                  <h2 className="mt-3 font-display text-4xl leading-none sm:text-5xl">{chapter.title}</h2>
+                )}
+                <p className="mt-4 text-sm leading-relaxed opacity-90 sm:text-base">{chapter.body}</p>
+              </div>
             </div>
           </section>
         ))}

@@ -41,7 +41,7 @@ export function useScrollProgress(
             end: "bottom bottom",
             // A numeric scrub adds a soft catch-up glide; reduced motion
             // ties progress directly to the scrollbar with no inertia.
-            scrub: reducedMotion ? true : 1.2,
+            scrub: reducedMotion ? true : 2,
             invalidateOnRefresh: true,
           },
         },

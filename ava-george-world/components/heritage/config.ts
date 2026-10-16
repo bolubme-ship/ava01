@@ -32,6 +32,12 @@ export interface Chapter {
   body: string;
 }
 
+/**
+ * How far the visitor scrolls between camera stops, in viewport heights.
+ * Higher = slower, more lingering walk.
+ */
+export const SCROLL_PER_STOP = 2.5;
+
 /** Interior half-extents of the walled courtyard. */
 export const COURTYARD = { halfX: 10.3, halfZ: 22.3 };
 
