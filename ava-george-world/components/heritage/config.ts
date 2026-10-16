@@ -155,17 +155,26 @@ function framingFor(p: PedestalConfig): CameraStation {
 }
 
 /**
- * Display One opens the courtyard: instead of a close-up, the camera stands
- * just inside the gate on the rug and looks down the whole avenue of looks,
- * with Look 01 framed on the left and the rear archway at the centre.
+ * Courtyard overview: the camera stands at the gate on the rug and looks
+ * down the whole avenue of looks to the rear archway, before the close-ups.
  */
-const DISPLAY_ONE_STATION: CameraStation = {
+const AVENUE_STATION: CameraStation = {
   position: [0.6, 1.55, COURTYARD.halfZ + 1.1],
   target: [-1.0, 2.05, 0],
   lens: 1.3,
 };
 
-const PEDESTAL_STATIONS = PEDESTALS.map((p, i) => (i === 0 ? DISPLAY_ONE_STATION : framingFor(p)));
+/**
+ * Look 01 stands only a few metres inside the gate, so the standard framing
+ * would put the camera inside the gate passage. Frame it from the rug
+ * instead: closer and more side-on, still clear of the passage walls.
+ */
+function lookOneStation(p: PedestalConfig): CameraStation {
+  const [x, y, z] = p.position;
+  return { position: [0.8, 1.7, z + 2.7], target: [x, y + GARMENT_FOCUS_Y, z] };
+}
+
+const PEDESTAL_STATIONS = PEDESTALS.map((p, i) => (i === 0 ? lookOneStation(p) : framingFor(p)));
 
 /** Pause on the archway, looking through it into the hall, before stepping inside. */
 const THRESHOLD_STATION: CameraStation = {
@@ -204,6 +213,14 @@ const STOPS: Stop[] = [
       body: "African childhood, beautifully imagined. Colour, culture and craftsmanship for little lives everywhere.",
     },
   },
+  {
+    station: AVENUE_STATION,
+    chapter: {
+      eyebrow: "The Courtyard",
+      title: "Welcome In",
+      body: "Five looks line the rug in the sun. Five more wait in the round hall beyond the arch.",
+    },
+  },
   ...PEDESTALS.slice(0, OUTDOOR_COUNT).map((p, i) => ({
     station: PEDESTAL_STATIONS[i],
     chapter: lookChapter(p, i),
@@ -224,9 +241,12 @@ const STOPS: Stop[] = [
 
 export const CAMERA_STATIONS: CameraStation[] = STOPS.map((s) => s.station);
 
-/** Index of the camera stop that frames pedestal `i` (the doorway stop sits between the zones). */
+/**
+ * Index of the camera stop that frames pedestal `i`. Stops run: hero (0),
+ * courtyard overview (1), courtyard looks, doorway, hall looks.
+ */
 export function stopIndexForPedestal(i: number): number {
-  return i < OUTDOOR_COUNT ? i + 1 : i + 2;
+  return i < OUTDOOR_COUNT ? i + 2 : i + 3;
 }
 
 /** One chapter per camera station. Placeholder copy. */
