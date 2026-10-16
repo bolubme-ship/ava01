@@ -1,28 +1,25 @@
 "use client";
 
+import { useMemo } from "react";
 import { Instance, Instances } from "@react-three/drei";
-import { HALL, PALETTE, type Vec3 } from "../config";
-import { ArchedWall, type ArchOpening } from "./ArchedWall";
+import { AdditiveBlending, DoubleSide, ExtrudeGeometry, Path, Shape, ShapeGeometry } from "three";
+import { ALCOVE_ANGLES, ALCOVE_RADIUS, HALL, PALETTE, onHallRing, type Vec3 } from "../config";
 import { useSurfaceTexture } from "./surfaceTexture";
 
 /*
- * The inner hall behind the courtyard's back wall, entered through its
- * central archway. Lime-washed walls, a dark timber beam ceiling, a woven
- * runner down the middle and a striped textile hanging behind the finale.
- * The ceiling and walls cast shadows, so sunlight only reaches inside
- * through the doorways and high windows; lanterns light each look.
+ * The inner hall: a round, domed room behind the courtyard's back wall,
+ * entered through its central archway. Four looks stand in arched alcoves
+ * around the curved wall under hanging lanterns; the finale stands on a
+ * stepped central dais beneath an open oculus, lit by a soft shaft of light.
+ * Timber beams radiate from the oculus like the spokes of a wheel.
  */
 
-const WALL_DEPTH = 0.6;
-const LENGTH = HALL.front - HALL.back;
-const MID_Z = (HALL.front + HALL.back) / 2;
-
-const SIDE_WINDOWS: ArchOpening[] = [-6, 0, 6].map((x) => ({
-  x,
-  width: 1.2,
-  height: 1.8,
-  sill: 3.4,
-}));
+const R = HALL.radius;
+const H = HALL.height;
+const CZ = HALL.centerZ;
+const WALL_THICKNESS = 0.6;
+/** Half-angle of the gap in the curved wall where the entrance arch meets it. */
+const DOOR_GAP = Math.asin((HALL.doorHalfWidth + 0.15) / R);
 
 const TEXTILE_BANDS = [
   PALETTE.indigoCloth,
@@ -34,85 +31,152 @@ const TEXTILE_BANDS = [
   PALETTE.indigoCloth,
 ];
 
-function Shell() {
-  const floorTexture = useSurfaceTexture(4, 6);
-  const runnerTexture = useSurfaceTexture(1, 10);
-  const ceilingTexture = useSurfaceTexture(3, 6);
-  const beams = [];
-  for (let z = HALL.front - 0.6; z > HALL.back; z -= 1.3) beams.push(z);
-
+function CurvedWall() {
+  const texture = useSurfaceTexture(14, 1.5);
   return (
     <group>
-      {[-1, 1].map((side) => (
-        <ArchedWall
-          key={side}
-          width={LENGTH + WALL_DEPTH * 2}
-          height={HALL.height}
-          depth={WALL_DEPTH}
-          openings={SIDE_WINDOWS}
+      <mesh position={[0, H / 2, CZ]} castShadow receiveShadow>
+        <cylinderGeometry args={[R, R, H, 96, 1, true, DOOR_GAP, Math.PI * 2 - DOOR_GAP * 2]} />
+        <meshStandardMaterial
           color={PALETTE.hallWall}
-          position={[side * (HALL.halfX + WALL_DEPTH / 2), 0, MID_Z]}
-          rotationY={Math.PI / 2}
+          map={texture}
+          roughness={0.95}
+          side={DoubleSide}
         />
-      ))}
-      <ArchedWall
-        width={HALL.halfX * 2 + WALL_DEPTH * 2}
-        height={HALL.height}
-        depth={WALL_DEPTH}
-        color={PALETTE.hallWall}
-        position={[0, 0, HALL.back - WALL_DEPTH / 2]}
-      />
-
-      {/* Ceiling slab and exposed beams. */}
-      <mesh position={[0, HALL.height + 0.18, MID_Z]} castShadow receiveShadow>
-        <boxGeometry args={[HALL.halfX * 2 + WALL_DEPTH * 2, 0.36, LENGTH + WALL_DEPTH * 2]} />
-        <meshStandardMaterial color={PALETTE.hallCeiling} map={ceilingTexture} roughness={0.9} />
       </mesh>
-      <Instances castShadow receiveShadow limit={32}>
-        <boxGeometry args={[HALL.halfX * 2, 0.24, 0.2]} />
-        <meshStandardMaterial color={PALETTE.timber} roughness={0.85} />
-        {beams.map((z) => (
-          <Instance key={z} position={[0, HALL.height - 0.12, z]} />
-        ))}
-      </Instances>
-
-      {/* Burnished clay floor with a woven runner. */}
-      <mesh position={[0, 0.006, MID_Z]} rotation-x={-Math.PI / 2} receiveShadow>
-        <planeGeometry args={[HALL.halfX * 2, LENGTH]} />
-        <meshStandardMaterial color={PALETTE.hallFloor} map={floorTexture} roughness={0.55} />
-      </mesh>
-      <mesh position={[0, 0.012, MID_Z + 0.4]} receiveShadow>
-        <boxGeometry args={[2.2, 0.012, LENGTH - 2.2]} />
-        <meshStandardMaterial color="#c99a5c" map={runnerTexture} roughness={0.95} />
-      </mesh>
-      {[-0.95, 0.95].map((x) => (
-        <mesh key={x} position={[x, 0.02, MID_Z + 0.4]} receiveShadow>
-          <boxGeometry args={[0.12, 0.012, LENGTH - 2.2]} />
-          <meshStandardMaterial color={PALETTE.indigoCloth} roughness={0.95} />
+      {/* Short jambs closing the seam between the courtyard wall and the curve. */}
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          position={[side * (HALL.doorHalfWidth + 0.35), H / 2, CZ + R - 0.05]}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[0.7, H, WALL_THICKNESS]} />
+          <meshStandardMaterial color={PALETTE.hallWall} map={texture} roughness={0.95} />
         </mesh>
       ))}
     </group>
   );
 }
 
-/** Striped wall hanging behind the finale look. */
-function Textile() {
-  const bandWidth = 0.66;
-  const width = bandWidth * TEXTILE_BANDS.length;
-  const z = HALL.back + 0.06;
+function Ceiling() {
+  const geometry = useMemo(() => {
+    const ring = new Shape();
+    ring.absarc(0, 0, R + WALL_THICKNESS, 0, Math.PI * 2, false);
+    const oculus = new Path();
+    oculus.absarc(0, 0, HALL.oculusRadius, 0, Math.PI * 2, true);
+    ring.holes.push(oculus);
+    const geo = new ExtrudeGeometry(ring, { depth: 0.36, bevelEnabled: false, curveSegments: 64 });
+    geo.rotateX(-Math.PI / 2);
+    return geo;
+  }, []);
+
+  const beamLength = R - HALL.oculusRadius;
+  const midRadius = HALL.oculusRadius + beamLength / 2;
+  const beamAngles = Array.from({ length: 16 }, (_, i) => i * 22.5 + 11.25);
+
   return (
-    <group position={[0, 3.2, z]}>
-      {TEXTILE_BANDS.map((color, i) => (
-        <mesh key={i} position={[(i - (TEXTILE_BANDS.length - 1) / 2) * bandWidth, 0, 0]} receiveShadow>
-          <boxGeometry args={[bandWidth, 3.8, 0.03]} />
-          <meshStandardMaterial color={color} roughness={0.95} />
-        </mesh>
-      ))}
-      <mesh position={[0, 1.98, 0.05]} rotation-z={Math.PI / 2} castShadow>
-        <cylinderGeometry args={[0.05, 0.05, width + 0.5, 12]} />
-        <meshStandardMaterial color={PALETTE.timber} roughness={0.8} />
+    <group>
+      <mesh geometry={geometry} position={[0, H, CZ]} castShadow receiveShadow>
+        <meshStandardMaterial color={PALETTE.hallCeiling} roughness={0.9} />
+      </mesh>
+      <Instances castShadow receiveShadow limit={16}>
+        <boxGeometry args={[0.2, 0.26, beamLength]} />
+        <meshStandardMaterial color={PALETTE.timber} roughness={0.85} />
+        {beamAngles.map((deg) => (
+          <Instance key={deg} position={onHallRing(midRadius, deg, H - 0.13)} rotation-y={(deg * Math.PI) / 180} />
+        ))}
+      </Instances>
+      {/*
+        Invisible disc that only casts shadow: it stops raw sun through the
+        oculus from striping the wall, leaving the soft light shaft as the
+        oculus's only light.
+      */}
+      <mesh position={[0, H + 0.4, CZ]} rotation-x={-Math.PI / 2} castShadow>
+        <circleGeometry args={[HALL.oculusRadius + 0.1, 48]} />
+        <meshBasicMaterial colorWrite={false} depthWrite={false} side={DoubleSide} />
+      </mesh>
+      <mesh position={[0, H - 0.02, CZ]} rotation-x={Math.PI / 2}>
+        <torusGeometry args={[HALL.oculusRadius, 0.08, 12, 64]} />
+        <meshStandardMaterial color={PALETTE.brass} metalness={0.7} roughness={0.4} />
       </mesh>
     </group>
+  );
+}
+
+function Floor() {
+  const texture = useSurfaceTexture(5, 5);
+  return (
+    <group>
+      <mesh position={[0, 0.006, CZ]} rotation-x={-Math.PI / 2} receiveShadow>
+        <circleGeometry args={[R, 96]} />
+        <meshStandardMaterial color={PALETTE.hallFloor} map={texture} roughness={0.55} />
+      </mesh>
+      {(
+        [
+          [3.3, 3.5, PALETTE.indigoCloth],
+          [5.55, 5.7, PALETTE.mustard],
+        ] as const
+      ).map(([inner, outer, color]) => (
+        <mesh key={inner} position={[0, 0.011, CZ]} rotation-x={-Math.PI / 2} receiveShadow>
+          <ringGeometry args={[inner, outer, 96]} />
+          <meshStandardMaterial color={color} roughness={0.8} />
+        </mesh>
+      ))}
+      {/* Two-step dais for the finale. */}
+      <mesh position={[0, 0.075, CZ]} castShadow receiveShadow>
+        <cylinderGeometry args={[2.05, 2.1, 0.15, 64]} />
+        <meshStandardMaterial color={PALETTE.stone} roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.225, CZ]} castShadow receiveShadow>
+        <cylinderGeometry args={[1.6, 1.65, 0.15, 64]} />
+        <meshStandardMaterial color="#f2e6d2" roughness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Soft column of light falling from the oculus onto the dais. */
+function LightShaft() {
+  const height = H - HALL.daisHeight;
+  return (
+    <group>
+      <mesh position={[0, HALL.daisHeight + height / 2, CZ]}>
+        <cylinderGeometry args={[HALL.oculusRadius * 0.95, 1.5, height, 48, 1, true]} />
+        <meshBasicMaterial
+          color="#fff0d2"
+          transparent
+          opacity={0.07}
+          blending={AdditiveBlending}
+          depthWrite={false}
+          side={DoubleSide}
+          fog={false}
+        />
+      </mesh>
+      <pointLight color="#ffe8c8" intensity={22} distance={10} decay={2} position={[0, 4.6, CZ]} />
+    </group>
+  );
+}
+
+/** Arched, slightly darker recess behind an alcove look. */
+function Alcove({ degrees }: { degrees: number }) {
+  const geometry = useMemo(() => {
+    const w = 1.25;
+    const spring = 2.6;
+    const s = new Shape();
+    s.moveTo(-w, 0);
+    s.lineTo(-w, spring);
+    s.absarc(0, spring, w, Math.PI, 0, true);
+    s.lineTo(w, 0);
+    s.closePath();
+    return new ShapeGeometry(s, 24);
+  }, []);
+  const rotation = ((degrees + 180) * Math.PI) / 180;
+  return (
+    <mesh geometry={geometry} position={onHallRing(R - 0.1, degrees)} rotation-y={rotation} receiveShadow>
+      <meshStandardMaterial color="#c79f74" roughness={0.95} />
+    </mesh>
   );
 }
 
@@ -120,7 +184,7 @@ function Textile() {
 function Lantern({ position }: { position: Vec3 }) {
   const [x, , z] = position;
   const y = 3.9;
-  const drop = HALL.height - y;
+  const drop = H - y;
   return (
     <group position={[x, y, z]}>
       <mesh position={[0, drop / 2, 0]}>
@@ -141,13 +205,39 @@ function Lantern({ position }: { position: Vec3 }) {
   );
 }
 
-export function InnerHall({ lanterns }: { lanterns: Vec3[] }) {
+/** Striped wall hanging on the far wall, behind the finale. */
+function Textile() {
+  const bandWidth = 0.62;
+  const width = bandWidth * TEXTILE_BANDS.length;
+  return (
+    <group position={onHallRing(R - 0.35, 180, 3.2)}>
+      {TEXTILE_BANDS.map((color, i) => (
+        <mesh key={i} position={[(i - (TEXTILE_BANDS.length - 1) / 2) * bandWidth, 0, 0]} receiveShadow>
+          <boxGeometry args={[bandWidth, 3.6, 0.03]} />
+          <meshStandardMaterial color={color} roughness={0.95} />
+        </mesh>
+      ))}
+      <mesh position={[0, 1.88, 0.05]} rotation-z={Math.PI / 2} castShadow>
+        <cylinderGeometry args={[0.05, 0.05, width + 0.5, 12]} />
+        <meshStandardMaterial color={PALETTE.timber} roughness={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
+export function InnerHall() {
   return (
     <group>
-      <Shell />
+      <CurvedWall />
+      <Ceiling />
+      <Floor />
+      <LightShaft />
       <Textile />
-      {lanterns.map((p) => (
-        <Lantern key={`${p[0]},${p[2]}`} position={p} />
+      {ALCOVE_ANGLES.map((deg) => (
+        <group key={deg}>
+          <Alcove degrees={deg} />
+          <Lantern position={onHallRing(ALCOVE_RADIUS, deg)} />
+        </group>
       ))}
     </group>
   );

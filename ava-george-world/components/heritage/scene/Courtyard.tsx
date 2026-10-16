@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Instance, Instances } from "@react-three/drei";
 import { DoubleSide, LatheGeometry, Vector2 } from "three";
-import { COURTYARD, PALETTE, type Vec3 } from "../config";
+import { COURTYARD, HALL, PALETTE, type Vec3 } from "../config";
 import { ArchedWall, type ArchOpening } from "./ArchedWall";
 import { useSurfaceTexture } from "./surfaceTexture";
 
@@ -27,7 +27,7 @@ const BACK_HEIGHT = 7.2;
 const FRONT_OPENINGS: ArchOpening[] = [{ x: 0, width: 4.4, height: 4.1 }];
 const BACK_OPENINGS: ArchOpening[] = [
   { x: -5, width: 2, height: 3.2 },
-  { x: 0, width: 3, height: 4.2 },
+  { x: 0, width: HALL.doorHalfWidth * 2, height: 4.6 },
   { x: 5, width: 2, height: 3.2 },
   { x: -5, width: 1, height: 1.5, sill: 4.4 },
   { x: 0, width: 1.2, height: 1.4, sill: 5.2 },

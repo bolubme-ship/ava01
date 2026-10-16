@@ -10,8 +10,6 @@ import { InnerHall } from "./scene/InnerHall";
 import { Lighting } from "./scene/Lighting";
 import { SkyDome } from "./scene/SkyDome";
 
-const HALL_LOOKS = PEDESTALS.filter((p) => p.zone === "hall").map((p) => p.position);
-
 export interface HeritageCanvasProps {
   progress: { current: ScrollProgress };
   reducedMotion: boolean;
@@ -32,7 +30,7 @@ export default function HeritageCanvas({ progress, reducedMotion }: HeritageCanv
 
       <Lighting />
       <Courtyard />
-      <InnerHall lanterns={HALL_LOOKS} />
+      <InnerHall />
       {PEDESTALS.map((p, i) => (
         <DisplayPedestal
           key={p.id}

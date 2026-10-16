@@ -4,7 +4,7 @@
  *
  * The walk has two spaces joined by a real doorway:
  *   1. the sunlit courtyard (looks 1–5),
- *   2. the inner hall behind the courtyard's back wall (looks 6–10).
+ *   2. a round, domed inner hall behind the courtyard's back wall (looks 6–10).
  *
  * Units are metres. +Z points towards the entrance gate, -Z towards the
  * back of the hall. The camera visits the stations in order as the page scrolls.
@@ -49,16 +49,27 @@ export const SCROLL_PER_STOP = 2.5;
 export const COURTYARD = { halfX: 10.3, halfZ: 12.3 };
 
 /**
- * The inner hall sits directly behind the courtyard's back wall and is
- * entered through its central archway. `front` and `back` are the inner
- * faces of its end walls; `halfX` is the inner half-width.
+ * The inner hall is a rotunda directly behind the courtyard's back wall,
+ * entered through its central archway (which sits at the rotunda's front,
+ * angle 0). `radius` is the inner face of the curved wall; the ceiling has
+ * an open oculus of `oculusRadius` above the central dais.
  */
+const HALL_RADIUS = 9;
 export const HALL = {
-  halfX: 7.3,
-  front: -COURTYARD.halfZ - 0.3,
-  back: -36.5,
+  radius: HALL_RADIUS,
+  centerZ: -COURTYARD.halfZ - 0.3 - HALL_RADIUS,
   height: 6.2,
+  oculusRadius: 2.1,
+  daisHeight: 0.3,
+  /** Half-width of the entrance archway in the courtyard's back wall. */
+  doorHalfWidth: 1.8,
 };
+
+/** Point on a circle around the rotunda centre. Angle in degrees, 0 = towards the entrance. */
+export function onHallRing(radius: number, degrees: number, y = 0): Vec3 {
+  const a = (degrees * Math.PI) / 180;
+  return [radius * Math.sin(a), y, HALL.centerZ + radius * Math.cos(a)];
+}
 
 /** Placeholder looks, in visiting order. Looks 1–5 are outside, 6–10 inside. */
 const LOOKS: Omit<PedestalConfig, "id" | "zone" | "position">[] = [
@@ -77,21 +88,25 @@ const LOOKS: Omit<PedestalConfig, "id" | "zone" | "position">[] = [
 const OUTDOOR_COUNT = 5;
 
 /*
- * Courtyard: looks zig-zag down either side of the central path.
- * Hall: a tighter zig-zag, ending with the finale on the centre line.
+ * Courtyard: looks zig-zag down either side of the central path and the
+ * camera walks forward between them.
+ * Hall: looks stand in alcoves around the curved wall and the camera
+ * circles the room facing outwards; the finale stands on the central dais.
  */
+export const ALCOVE_RADIUS = 7;
+const ORBIT_RADIUS = 2.6;
+/** Alcove angles in visiting order: left-front, left-back, right-back, right-front. */
+export const ALCOVE_ANGLES = [-70, -140, 140, 70];
+
 function positionFor(i: number): { zone: Zone; position: Vec3 } {
   if (i < OUTDOOR_COUNT) {
     const x = i % 2 === 0 ? -3.6 : 3.6;
     return { zone: "courtyard", position: [x, 0, 6 - 3.5 * i] };
   }
-  const j = i - OUTDOOR_COUNT;
   if (i === LOOKS.length - 1) {
-    // Finale gets extra room so its camera stands clear of the previous look.
-    return { zone: "hall", position: [0, 0, HALL.front - 4.9 - 3.4 * (j - 1) - 5.5] };
+    return { zone: "hall", position: [0, HALL.daisHeight, HALL.centerZ] };
   }
-  const x = j % 2 === 0 ? -3 : 3;
-  return { zone: "hall", position: [x, 0, HALL.front - 4.9 - 3.4 * j] };
+  return { zone: "hall", position: onHallRing(ALCOVE_RADIUS, ALCOVE_ANGLES[i - OUTDOOR_COUNT]) };
 }
 
 export const PEDESTALS: PedestalConfig[] = LOOKS.map((look, i) => ({
@@ -104,18 +119,25 @@ export const PEDESTALS: PedestalConfig[] = LOOKS.map((look, i) => ({
 const GARMENT_FOCUS_Y = 1.3;
 
 /**
- * The camera stands across the path from each side look and a few metres
- * back, so it crosses left/right between stops while moving forward.
- * Hall framings are a little tighter to fit the narrower room.
+ * Courtyard: the camera stands across the path from each look and a few
+ * metres back, so it crosses left/right between stops while moving forward.
+ * Hall alcoves: the camera stands on an inner orbit at the alcove's angle,
+ * looking straight out at it. Finale: the camera faces the dais from the
+ * entrance side, with the textile on the far wall behind it.
  */
 function framingFor(p: PedestalConfig): CameraStation {
-  const [x, , z] = p.position;
-  const side = Math.sign(x);
-  const indoor = p.zone === "hall";
-  const lateral = indoor ? 2.2 : 2.4;
-  const back = indoor ? 4.2 : 5.4;
-  const position: Vec3 = side === 0 ? [0.8, 1.7, z + back + 0.6] : [x - side * lateral, 1.75, z + back];
-  return { position, target: [x, GARMENT_FOCUS_Y, z] };
+  const [x, y, z] = p.position;
+  const target: Vec3 = [x, y + GARMENT_FOCUS_Y, z];
+  if (p.zone === "courtyard") {
+    const side = Math.sign(x);
+    return { position: [x - side * 2.4, 1.75, z + 5.4], target };
+  }
+  const radial = Math.hypot(x, z - HALL.centerZ);
+  if (radial < 0.01) {
+    return { position: [0.8, 1.9, HALL.centerZ + 4.8], target };
+  }
+  const degrees = (Math.atan2(x, z - HALL.centerZ) * 180) / Math.PI;
+  return { position: onHallRing(ORBIT_RADIUS, degrees, 1.75), target };
 }
 
 const PEDESTAL_STATIONS = PEDESTALS.map(framingFor);
@@ -123,7 +145,7 @@ const PEDESTAL_STATIONS = PEDESTALS.map(framingFor);
 /** Pause on the archway, looking through it into the hall, before stepping inside. */
 const THRESHOLD_STATION: CameraStation = {
   position: [0, 1.75, -COURTYARD.halfZ + 5.8],
-  target: [0, 1.7, HALL.front - 8],
+  target: [0, 1.7, HALL.centerZ],
 };
 
 const NUMBER_WORDS = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -163,7 +185,7 @@ const STOPS: Stop[] = [
     chapter: {
       eyebrow: "The Inner Hall",
       title: "Step inside",
-      body: "Five more looks wait in the cool of the hall.",
+      body: "Five more looks wait in the cool of the round hall.",
     },
   },
   ...PEDESTALS.slice(OUTDOOR_COUNT).map((p, j) => ({

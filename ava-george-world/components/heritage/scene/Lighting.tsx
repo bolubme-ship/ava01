@@ -15,7 +15,7 @@ export function Lighting() {
   const shadowMapSize = isSmallScreen ? 2048 : 4096;
   const sunTarget = useMemo(() => {
     const target = new Object3D();
-    target.position.set(0, 0, -11);
+    target.position.set(0, 0, -10);
     return target;
   }, []);
 
@@ -27,7 +27,7 @@ export function Lighting() {
       <directionalLight
         color="#ffd29a"
         intensity={2.8}
-        position={[14, 12, -1]}
+        position={[14, 12, 0]}
         target={sunTarget}
         castShadow
         shadow-mapSize={[shadowMapSize, shadowMapSize]}
