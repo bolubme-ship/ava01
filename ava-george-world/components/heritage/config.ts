@@ -31,6 +31,8 @@ export interface PedestalConfig {
 export interface CameraStation {
   position: Vec3;
   target: Vec3;
+  /** Multiplier on the base field of view; >1 is a wider lens. Default 1. */
+  lens?: number;
 }
 
 export interface Chapter {
@@ -47,6 +49,18 @@ export const SCROLL_PER_STOP = 2.5;
 
 /** Interior half-extents of the walled courtyard. */
 export const COURTYARD = { halfX: 10.3, halfZ: 12.3 };
+
+/**
+ * The monumental entrance archway in the middle of the front wall: a deep
+ * gatehouse block with a tall round arch, framing the opening shot.
+ */
+export const GATE = {
+  halfWidth: 3.5,
+  archHeight: 6.4,
+  towerHalfWidth: 5.6,
+  towerHeight: 9.4,
+  depth: 1.6,
+};
 
 /**
  * The inner hall is a rotunda directly behind the courtyard's back wall,
@@ -73,11 +87,11 @@ export function onHallRing(radius: number, degrees: number, y = 0): Vec3 {
 
 /** Placeholder looks, in visiting order. Looks 1–5 are outside, 6–10 inside. */
 const LOOKS: Omit<PedestalConfig, "id" | "zone" | "position">[] = [
-  { silhouette: "dress", fabric: "#d9962f", accent: "#8f3b1f" },
-  { silhouette: "tunic", fabric: "#2f4a80", accent: "#e0b45a" },
-  { silhouette: "dress", fabric: "#a8432a", accent: "#f0dcb4" },
-  { silhouette: "tunic", fabric: "#3f6b45", accent: "#e3b23c" },
-  { silhouette: "dress", fabric: "#d9735a", accent: "#3b2a1f" },
+  { silhouette: "dress", fabric: "#f2b02e", accent: "#b5562f" },
+  { silhouette: "tunic", fabric: "#2f4f9c", accent: "#f2c14e" },
+  { silhouette: "dress", fabric: "#d8322c", accent: "#f3e6cf" },
+  { silhouette: "dress", fabric: "#1f7a4a", accent: "#f3e6cf" },
+  { silhouette: "dress", fabric: "#ef8c95", accent: "#fff4ea" },
   { silhouette: "tunic", fabric: "#efe3cc", accent: "#8f3b1f" },
   { silhouette: "dress", fabric: "#6b2f4a", accent: "#e0b45a" },
   { silhouette: "tunic", fabric: "#c4822f", accent: "#2c3f6b" },
@@ -100,8 +114,8 @@ export const ALCOVE_ANGLES = [-70, -140, 140, 70];
 
 function positionFor(i: number): { zone: Zone; position: Vec3 } {
   if (i < OUTDOOR_COUNT) {
-    const x = i % 2 === 0 ? -3.6 : 3.6;
-    return { zone: "courtyard", position: [x, 0, 6 - 3.5 * i] };
+    const x = i % 2 === 0 ? -3.4 : 3.4;
+    return { zone: "courtyard", position: [x, 0, 8.5 - 3.5 * i] };
   }
   if (i === LOOKS.length - 1) {
     return { zone: "hall", position: [0, HALL.daisHeight, HALL.centerZ] };
@@ -166,14 +180,16 @@ interface Stop {
 /** Every camera stop in order, each paired with the copy shown there. */
 const STOPS: Stop[] = [
   {
+    // Hero: a child's-eye view through the great arch, with a wider lens.
     station: {
-      position: [0, 2.4, COURTYARD.halfZ + 7],
-      target: [0, 1.9, COURTYARD.halfZ - 12],
+      position: [0, 1.45, COURTYARD.halfZ + 7.2],
+      target: [0, 3.6, COURTYARD.halfZ - 19],
+      lens: 1.38,
     },
     chapter: {
       eyebrow: "Ava & George World",
       title: "The Heritage Collection",
-      body: "Scroll to step into the courtyard.",
+      body: "African childhood, beautifully imagined. Colour, culture and craftsmanship for little lives everywhere.",
     },
   },
   ...PEDESTALS.slice(0, OUTDOOR_COUNT).map((p, i) => ({
@@ -196,6 +212,11 @@ const STOPS: Stop[] = [
 
 export const CAMERA_STATIONS: CameraStation[] = STOPS.map((s) => s.station);
 
+/** Index of the camera stop that frames pedestal `i` (the doorway stop sits between the zones). */
+export function stopIndexForPedestal(i: number): number {
+  return i < OUTDOOR_COUNT ? i + 1 : i + 2;
+}
+
 /** One chapter per camera station. Placeholder copy. */
 export const CHAPTERS: Chapter[] = STOPS.map((s) => s.chapter);
 
@@ -208,12 +229,14 @@ export function facingRotation(pedestalIndex: number): number {
 
 /** Warm palette shared by the scene. */
 export const PALETTE = {
-  sky: "#f3d7ae",
-  ground: "#d8b88a",
-  path: "#c79f74",
-  wallWarm: "#c98a57",
-  wallLight: "#dcae7c",
-  wallTrim: "#e9cfa6",
+  haze: "#f1d9bd",
+  skyHorizon: "#e4eef6",
+  skyZenith: "#2b78d0",
+  wallWarm: "#d88a54",
+  wallLight: "#e09a63",
+  wallTrim: "#efcf9f",
+  canopyCream: "#f3e2c4",
+  canopyRed: "#c8442f",
   timber: "#6b4428",
   clay: "#b0603a",
   foliage: "#6f7d3c",

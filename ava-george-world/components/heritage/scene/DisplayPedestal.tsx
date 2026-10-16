@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
-import { LatheGeometry, Vector2, type Group } from "three";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { Html } from "@react-three/drei";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
+import { LatheGeometry, MathUtils, Vector2, type Group } from "three";
 import { PALETTE, type Silhouette, type Vec3 } from "../config";
 
 interface DisplayPedestalProps {
@@ -14,6 +15,12 @@ interface DisplayPedestalProps {
   accent: string;
   /** Gentle idle sway of the garment; off for reduced motion. */
   animate?: boolean;
+  /** Short name shown on hover, e.g. "Look 03". */
+  label: string;
+  /** Called when the visitor clicks or taps the display. */
+  onSelect?: () => void;
+  /** Fixed, screen-sized layer the hover label is rendered into. */
+  labelLayer?: RefObject<HTMLElement | null>;
 }
 
 const PLINTH_TOP = 0.72;
@@ -22,6 +29,9 @@ const PLINTH_TOP = 0.72;
  * Round plinth with a brass collar holding a placeholder child's outfit.
  * Replace <PlaceholderGarment> with a loaded outfit model later; the plinth
  * and its placement stay the same.
+ *
+ * Interactive: on hover the garment lifts, turns to face the viewer and a
+ * label appears; clicking selects the look (the page scrolls to its stop).
  */
 export function DisplayPedestal({
   position,
@@ -30,24 +40,52 @@ export function DisplayPedestal({
   fabric,
   accent,
   animate = true,
+  label,
+  onSelect,
+  labelLayer,
 }: DisplayPedestalProps) {
   const garment = useRef<Group>(null);
   const phase = useMemo(() => position[0] * 1.7 + position[2], [position]);
+  const [hovered, setHovered] = useState(false);
 
-  useFrame(({ clock }) => {
-    if (!garment.current) return;
-    garment.current.rotation.y = animate ? Math.sin(clock.elapsedTime * 0.35 + phase) * 0.12 : 0;
+  useEffect(() => {
+    if (!hovered) return;
+    document.body.style.cursor = "pointer";
+    return () => {
+      document.body.style.cursor = "";
+    };
+  }, [hovered]);
+
+  useFrame(({ clock }, delta) => {
+    const g = garment.current;
+    if (!g) return;
+    const sway = animate && !hovered ? Math.sin(clock.elapsedTime * 0.35 + phase) * 0.12 : 0;
+    const k = animate ? 1 - Math.exp(-delta * 8) : 1;
+    g.rotation.y = MathUtils.lerp(g.rotation.y, sway, k);
+    g.position.y = MathUtils.lerp(g.position.y, PLINTH_TOP + (hovered ? 0.08 : 0), k);
+    const s = MathUtils.lerp(g.scale.x, hovered ? 1.04 : 1, k);
+    g.scale.setScalar(s);
   });
 
+  const over = (e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    setHovered(true);
+  };
+  const out = () => setHovered(false);
+  const click = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation();
+    onSelect?.();
+  };
+
   return (
-    <group position={position} rotation-y={rotationY}>
+    <group position={position} rotation-y={rotationY} onPointerOver={over} onPointerOut={out} onClick={click}>
       <mesh position={[0, 0.06, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.78, 0.82, 0.12, 48]} />
-        <meshStandardMaterial color={PALETTE.stone} roughness={0.7} />
+        <meshStandardMaterial color="#f1ebe1" roughness={0.6} />
       </mesh>
       <mesh position={[0, 0.39, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.6, 0.64, 0.54, 48]} />
-        <meshStandardMaterial color="#f2e6d2" roughness={0.75} />
+        <meshStandardMaterial color="#fbf8f2" roughness={0.55} />
       </mesh>
       <mesh position={[0, PLINTH_TOP - 0.03, 0]} castShadow>
         <cylinderGeometry args={[0.63, 0.63, 0.04, 48]} />
@@ -57,6 +95,21 @@ export function DisplayPedestal({
       <group ref={garment} position={[0, PLINTH_TOP, 0]}>
         <PlaceholderGarment silhouette={silhouette} fabric={fabric} accent={accent} />
       </group>
+
+      {hovered && (
+        // Sits on the plinth front so it stays in frame even on close-ups.
+        <Html
+          position={[0, 0.42, 0.66]}
+          center
+          portal={labelLayer as RefObject<HTMLElement>}
+          zIndexRange={[25, 0]}
+          style={{ pointerEvents: "none" }}
+        >
+          <div className="whitespace-nowrap rounded-full bg-[#2a170c]/80 px-4 py-2 text-center text-[11px] tracking-[0.22em] text-[#fbf1e1] uppercase shadow-lg backdrop-blur-sm">
+            {label} · View look
+          </div>
+        </Html>
+      )}
     </group>
   );
 }

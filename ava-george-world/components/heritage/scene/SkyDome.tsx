@@ -20,7 +20,7 @@ export function SkyDome({ horizon, zenith, radius = 90 }: SkyDomeProps) {
     const c = new Color();
     for (let i = 0; i < pos.count; i++) {
       const t = Math.min(Math.max(pos.getY(i) / radius, 0), 1);
-      c.copy(low).lerp(high, Math.pow(t, 0.6));
+      c.copy(low).lerp(high, Math.pow(t, 0.45));
       c.toArray(colors, i * 3);
     }
     geo.setAttribute("color", new BufferAttribute(colors, 3));

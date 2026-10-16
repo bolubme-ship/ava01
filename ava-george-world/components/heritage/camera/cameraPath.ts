@@ -20,14 +20,18 @@ export function snapToStation(progress: number, segments: number): number {
 
 export interface CameraPath {
   segments: number;
-  /** Writes the camera position and look-at target for `progress` (0..1). */
-  sample(progress: number, outPosition: Vector3, outTarget: Vector3): void;
+  /**
+   * Writes the camera position and look-at target for `progress` (0..1) and
+   * returns the lens multiplier (field-of-view scale) at that point.
+   */
+  sample(progress: number, outPosition: Vector3, outTarget: Vector3): number;
 }
 
 /**
  * Smooth spline through the station positions plus a second spline through
  * their targets. CatmullRomCurve3.getPoint is index-uniform, so station i
- * lands exactly at t = i / segments.
+ * lands exactly at t = i / segments. Lens multipliers ease linearly between
+ * neighbouring stations on the same timing.
  */
 export function createCameraPath(stations: CameraStation[]): CameraPath {
   const toCurve = (pick: (s: CameraStation) => [number, number, number]) =>
@@ -40,6 +44,7 @@ export function createCameraPath(stations: CameraStation[]): CameraPath {
   const positionCurve = toCurve((s) => s.position);
   const targetCurve = toCurve((s) => s.target);
   const segments = stations.length - 1;
+  const lenses = stations.map((s) => s.lens ?? 1);
 
   return {
     segments,
@@ -47,6 +52,9 @@ export function createCameraPath(stations: CameraStation[]): CameraPath {
       const t = dwellAtStations(progress, segments);
       positionCurve.getPoint(t, outPosition);
       targetCurve.getPoint(t, outTarget);
+      const scaled = t * segments;
+      const i = Math.min(Math.floor(scaled), segments - 1);
+      return MathUtils.lerp(lenses[i], lenses[i + 1], scaled - i);
     },
   };
 }

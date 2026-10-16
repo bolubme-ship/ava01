@@ -7,6 +7,9 @@ import { CAMERA_STATIONS } from "../config";
 import type { ScrollProgress } from "../hooks/useScrollProgress";
 import { createCameraPath, snapToStation } from "./cameraPath";
 
+/** Widest lens we ever use, so stacked multipliers can't fisheye on tall phones. */
+const MAX_FOV = 74;
+
 /** Wider lens on narrow / portrait screens so the courtyard doesn't feel cramped. */
 function fovForAspect(aspect: number): number {
   if (aspect >= 1.3) return 40;
@@ -37,15 +40,15 @@ export function CameraRig({ progress, reducedMotion }: CameraRigProps) {
   useFrame(({ camera, clock, size }) => {
     const lens = camera as PerspectiveCamera;
     const aspect = size.width / size.height;
-    const fov = fovForAspect(aspect);
-    if (lens.fov !== fov) {
+    const raw = progress.current.value;
+    const t = reducedMotion ? snapToStation(raw, path.segments) : raw;
+    const lensScale = path.sample(t, position.current, target.current);
+
+    const fov = Math.min(fovForAspect(aspect) * lensScale, MAX_FOV);
+    if (Math.abs(lens.fov - fov) > 1e-3) {
       lens.fov = fov;
       lens.updateProjectionMatrix();
     }
-
-    const raw = progress.current.value;
-    const t = reducedMotion ? snapToStation(raw, path.segments) : raw;
-    path.sample(t, position.current, target.current);
 
     if (aspect > 1.1) {
       right.current.subVectors(target.current, position.current).cross(UP).normalize();
