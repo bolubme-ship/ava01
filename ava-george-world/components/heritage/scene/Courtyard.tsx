@@ -14,7 +14,8 @@ import { useSurfaceTexture } from "./surfaceTexture";
  * Everything is primitive geometry so it can be swapped for modelled
  * assets later without touching the camera or scroll code.
  *
- * Courtyard interior spans x ∈ [-10, 10], z ∈ [-22, 22].
+ * Courtyard interior spans x ∈ [-10, 10], z ∈ [-12, 12]. The central
+ * back archway opens into the inner hall (see InnerHall).
  */
 
 const HALF_X = COURTYARD.halfX;
@@ -32,7 +33,7 @@ const BACK_OPENINGS: ArchOpening[] = [
   { x: 0, width: 1.2, height: 1.4, sill: 5.2 },
   { x: 5, width: 1, height: 1.5, sill: 4.4 },
 ];
-const SIDE_OPENINGS: ArchOpening[] = [-15, -5, 5, 15].map((x) => ({
+const SIDE_OPENINGS: ArchOpening[] = [-6, 6].map((x) => ({
   x,
   width: 1.1,
   height: 1.6,
@@ -115,11 +116,6 @@ function Walls() {
         </mesh>
       ))}
 
-      {/* Shadowed interior seen through the back doorways. */}
-      <mesh position={[0, BACK_HEIGHT / 2, -HALF_Z - 1.6]}>
-        <planeGeometry args={[HALF_X * 2, BACK_HEIGHT]} />
-        <meshBasicMaterial color={PALETTE.shadowInterior} />
-      </mesh>
     </group>
   );
 }
@@ -250,9 +246,9 @@ function ClayPots() {
     [[-2.3, 0, back], 1],
     [[2.3, 0, back], 1],
     [[8.9, 0, HALF_Z - 1.7], 1.2],
-    [[-9, 0, 2.6], 1.1],
-    [[9, 0, -14.5], 1.2],
-    [[8.3, 0, -15.1], 0.85],
+    [[-9, 0, 8.8], 1.1],
+    [[9.1, 0, -11.3], 1.2],
+    [[8.3, 0, -11.6], 0.85],
   ];
   return (
     <group>
@@ -269,8 +265,8 @@ function ClayPots() {
 function Benches() {
   const texture = useSurfaceTexture(2, 0.5);
   const benches: Vec3[] = [
-    [-HALF_X + 0.55, 0.22, -4.5],
-    [HALF_X - 0.55, 0.22, 13],
+    [-HALF_X + 0.55, 0.22, -4],
+    [HALF_X - 0.55, 0.22, 7],
   ];
   return (
     <group>
@@ -287,12 +283,12 @@ function Benches() {
 /** Indigo shade cloth stretched from the right wall to two timber poles. */
 function ShadeCloth() {
   const poles: Vec3[] = [
-    [6, 2.1, 3.5],
-    [6, 2.1, -1.5],
+    [6, 2.1, 1.5],
+    [6, 2.1, -3.5],
   ];
   return (
     <group>
-      <mesh position={[8.1, 4.4, 1]} rotation={[-Math.PI / 2, -0.12, 0]} castShadow>
+      <mesh position={[8.1, 4.4, -1]} rotation={[-Math.PI / 2, -0.12, 0]} castShadow>
         <planeGeometry args={[4.3, 5.2]} />
         {/* Faint emissive fakes sunlight glowing through the weave from above. */}
         <meshStandardMaterial
@@ -320,8 +316,8 @@ export function Courtyard() {
       <Walls />
       <Silhouette />
       <Toron />
-      <Tree position={[7.6, 0, -9.5]} />
-      <Tree position={[-7.6, 0, 9.5]} />
+      <Tree position={[7.8, 0, -8.6]} />
+      <Tree position={[-7.6, 0, 2.5]} />
       <ClayPots />
       <Benches />
       <ShadeCloth />

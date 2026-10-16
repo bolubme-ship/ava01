@@ -6,8 +6,11 @@ import { CameraRig } from "./camera/CameraRig";
 import type { ScrollProgress } from "./hooks/useScrollProgress";
 import { Courtyard } from "./scene/Courtyard";
 import { DisplayPedestal } from "./scene/DisplayPedestal";
+import { InnerHall } from "./scene/InnerHall";
 import { Lighting } from "./scene/Lighting";
 import { SkyDome } from "./scene/SkyDome";
+
+const HALL_LOOKS = PEDESTALS.filter((p) => p.zone === "hall").map((p) => p.position);
 
 export interface HeritageCanvasProps {
   progress: { current: ScrollProgress };
@@ -29,6 +32,7 @@ export default function HeritageCanvas({ progress, reducedMotion }: HeritageCanv
 
       <Lighting />
       <Courtyard />
+      <InnerHall lanterns={HALL_LOOKS} />
       {PEDESTALS.map((p, i) => (
         <DisplayPedestal
           key={p.id}
