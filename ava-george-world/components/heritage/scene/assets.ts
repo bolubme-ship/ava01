@@ -29,6 +29,8 @@ export const HERITAGE_TEXTURES = {
   palm: "textures/heritage/palm.webp",
   geranium: "textures/heritage/geranium.webp",
   fern: "textures/heritage/fern.webp",
+  monstera: "textures/heritage/monstera.webp",
+  birdOfParadise: "textures/heritage/bird-of-paradise.webp",
 } as const;
 
 export type HeritageTextureName = keyof typeof HERITAGE_TEXTURES;

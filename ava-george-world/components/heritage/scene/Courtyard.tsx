@@ -458,7 +458,7 @@ function BlindNiches() {
 const COURTYARD_LOOKS = PEDESTALS.filter((p) => p.zone === "courtyard");
 
 /** A rotating mix of potted plants, so no two displays are planted alike. */
-const DISPLAY_PLANTS = ["fern", "geranium", "agave", "bougainvillea"] as const;
+const DISPLAY_PLANTS = ["fern", "birdOfParadise", "geranium", "agave", "bougainvillea"] as const;
 
 function DisplayPlant({ kind, position, scale, seed }: { kind: (typeof DISPLAY_PLANTS)[number]; position: Vec3; scale: number; seed: number }) {
   if (kind === "agave") return <PottedPlant position={position} scale={scale} seed={seed} />;
@@ -474,7 +474,7 @@ function Garden() {
       <PottedPlant position={[-3.2, 0, 15.9]} scale={1.7} seed={21} />
       <PottedPlant position={[-4.7, 0, 14.4]} scale={1.05} seed={22} />
       <CardPlant kind="fern" position={[-5.6, 0, 15.2]} scale={1.2} seed={24} />
-      <CarvedPot position={[3.4, 0, 15.5]} scale={1.5} />
+      <CardPlant kind="birdOfParadise" position={[3.4, 0, 15.5]} scale={1.25} seed={26} />
       <PottedPlant position={[4.6, 0, 14.3]} scale={1.15} seed={23} />
       <CardPlant kind="geranium" position={[5.8, 0, 16.4]} scale={1.3} seed={25} />
 
@@ -494,13 +494,13 @@ function Garden() {
         return (
           <group key={p.id}>
             <DisplayPlant
-              kind={DISPLAY_PLANTS[i % 4]}
+              kind={DISPLAY_PLANTS[i % DISPLAY_PLANTS.length]}
               position={[x + out * 1.35, 0, z - 0.55]}
               scale={0.78}
               seed={50 + i}
             />
             <DisplayPlant
-              kind={DISPLAY_PLANTS[(i + 2) % 4]}
+              kind={DISPLAY_PLANTS[(i + 2) % DISPLAY_PLANTS.length]}
               position={[x + out * 1.2, 0, z + 0.95]}
               scale={0.72}
               seed={60 + i}
@@ -521,6 +521,10 @@ function Garden() {
       <CardPlant kind="fern" position={[-9.0, 0, -7.2]} scale={1.1} seed={46} />
       <CardPlant kind="geranium" position={[9.0, 0, 8.2]} scale={1.1} seed={49} />
       <CardPlant kind="fern" position={[-9.0, 0, 8.6]} seed={40} />
+      {/* Monsteras in the shade beneath the wall lanterns and by the back corner. */}
+      <CardPlant kind="monstera" position={[-9.2, 0, 5.4]} scale={0.85} seed={37} />
+      <CardPlant kind="monstera" position={[9.2, 0, 2.0]} scale={0.85} seed={38} />
+      <CardPlant kind="monstera" position={[9.0, 0, -9.0]} scale={0.9} seed={39} />
     </group>
   );
 }

@@ -473,6 +473,8 @@ const CARD_PLANTS = {
   geranium: { texture: "geranium", height: 0.85, aspect: 1, sink: 0.14, pot: "urn", potScale: 0.95 },
   palm: { texture: "palm", height: 2.9, aspect: 0.67, sink: 0.08, pot: "planter", potScale: 1.5 },
   lemonTree: { texture: "lemonTree", height: 3.0, aspect: 0.67, sink: 0.05, pot: "planter", potScale: 1.45 },
+  monstera: { texture: "monstera", height: 1.05, aspect: 2, sink: 0.3, pot: "urn", potScale: 1.1 },
+  birdOfParadise: { texture: "birdOfParadise", height: 1.9, aspect: 0.67, sink: 0.12, pot: "planter", potScale: 1.15 },
 } as const satisfies Record<
   string,
   { texture: HeritageTextureName; height: number; aspect: number; sink: number; pot: PotShape; potScale: number }
