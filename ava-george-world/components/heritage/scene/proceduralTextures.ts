@@ -525,6 +525,121 @@ const coveGlow: Painter = (ctx, w, h) => {
   ctx.fillRect(0, 0, w, h);
 };
 
+// ---------------------------------------------------------------------------
+// Entrance
+
+/** Red banner for the gate pillars: cream edge stripes, a cream chevron band and a pointed hem. */
+const gateBanner: Painter = (ctx, w, h) => {
+  ctx.clearRect(0, 0, w, h);
+  const point = h * 0.09;
+  const body = new Path2D();
+  body.moveTo(0, 0);
+  body.lineTo(w, 0);
+  body.lineTo(w, h - point);
+  body.lineTo(w / 2, h);
+  body.lineTo(0, h - point);
+  body.closePath();
+  const g = ctx.createLinearGradient(0, 0, w, 0);
+  g.addColorStop(0, "#7e1418");
+  g.addColorStop(0.5, "#b0232a");
+  g.addColorStop(1, "#7e1418");
+  ctx.fillStyle = g;
+  ctx.fill(body);
+  ctx.save();
+  ctx.clip(body);
+  ctx.fillStyle = "#f2e2c4";
+  ctx.fillRect(w * 0.08, 0, w * 0.07, h);
+  ctx.fillRect(w * 0.85, 0, w * 0.07, h);
+  // Cream chevron band above the hem, following its point.
+  const band = h * 0.07;
+  const top = h * 0.72;
+  ctx.beginPath();
+  ctx.moveTo(0, top);
+  ctx.lineTo(w / 2, top + point);
+  ctx.lineTo(w, top);
+  ctx.lineTo(w, top + band);
+  ctx.lineTo(w / 2, top + point + band);
+  ctx.lineTo(0, top + band);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+};
+
+/**
+ * One glass panel of a Moroccan lantern's body: a brass frame round a
+ * pointed-arch window (transparent, so the glowing core shows) crossed by a
+ * fine brass lattice. Repeated once per face round the hexagonal body.
+ */
+const lanternPanel: Painter = (ctx, w, h) => {
+  ctx.fillStyle = "#b5893f";
+  ctx.fillRect(0, 0, w, h);
+  const inset = w * 0.12;
+  const spring = h * 0.32;
+  const window = new Path2D();
+  window.moveTo(inset, h - inset);
+  window.lineTo(inset, spring);
+  window.quadraticCurveTo(inset, inset, w / 2, inset * 0.8);
+  window.quadraticCurveTo(w - inset, inset, w - inset, spring);
+  window.lineTo(w - inset, h - inset);
+  window.closePath();
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fill(window);
+  ctx.globalCompositeOperation = "source-over";
+  ctx.save();
+  ctx.clip(window);
+  ctx.strokeStyle = "#a07330";
+  ctx.lineWidth = w * 0.035;
+  for (let k = -4; k <= 8; k++) {
+    const x = (k / 4) * w;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + h * 0.6, h);
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x - h * 0.6, h);
+    ctx.stroke();
+  }
+  ctx.restore();
+};
+
+/**
+ * Pierced brass for Moroccan lanterns: an opaque brass sheet cut with rows of
+ * eight-point stars and drops (transparent), wrapping round the body (u).
+ */
+const lanternPierce: Painter = (ctx, w, h) => {
+  ctx.fillStyle = "#b5893f";
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(90,60,20,0.6)";
+  ctx.lineWidth = 2;
+  for (let y = 0; y <= h; y += h / 8) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = "destination-out";
+  const cols = 8;
+  const rows = 4;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cx = ((c + (r % 2) * 0.5 + 0.25) / cols) * w;
+      const cy = ((r + 0.5) / rows) * h;
+      const rad = (w / cols) * 0.3;
+      ctx.beginPath();
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2;
+        const rr = k % 2 === 0 ? rad : rad * 0.55;
+        ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 1.2);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cx + w / cols / 2, cy + (h / rows) * 0.42, rad * 0.22, rad * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalCompositeOperation = "source-over";
+};
+
 const PAINTERS = {
   stoneTiles: [1024, 1024, stoneTiles],
   rug: [256, 1024, rug],
@@ -539,6 +654,9 @@ const PAINTERS = {
   lightRay: [64, 256, lightRay],
   coveGlow: [16, 128, coveGlow],
   glowSpot: [128, 128, glowSpot],
+  gateBanner: [256, 1024, gateBanner],
+  lanternPierce: [512, 256, lanternPierce],
+  lanternPanel: [128, 256, lanternPanel],
 } as const;
 
 export type ProceduralTextureName = keyof typeof PAINTERS;

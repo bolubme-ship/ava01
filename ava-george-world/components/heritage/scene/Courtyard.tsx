@@ -5,6 +5,7 @@ import { Instance, Instances } from "@react-three/drei";
 import { ExtrudeGeometry, Shape, ShapeGeometry } from "three";
 import { COURTYARD, GATE, HALL, PALETTE, PEDESTALS, type Vec3 } from "../config";
 import { ArchedWall, archBandShape, type ArchOpening, type ArchTrim } from "./ArchedWall";
+import { Entrance, ENTRANCE } from "./Entrance";
 import { CanopySail, Kilim, WallSconce } from "./Fabrics";
 import { Bougainvillea, CardPlant, CarvedPot, FloweringShrub, IvyCurtain, OliveTree, PottedPlant, TallTrees } from "./Planting";
 import { useHeritageTexture } from "./assets";
@@ -249,7 +250,8 @@ function Benches() {
  * Climber paths are module constants so the instanced foliage is generated
  * once, not on every render.
  */
-const GATE_Z = GATE_FACE_Z + 0.02;
+/** Climbers on the gate grow over the front of its stone surround. */
+const GATE_Z = ENTRANCE.surroundFrontZ + 0.02;
 const CLIMBERS: {
   path: Vec3[];
   normal: Vec3;
@@ -277,9 +279,9 @@ const CLIMBERS: {
   },
   {
     path: [
-      [-5.3, 3.5, GATE_Z],
-      [-5.2, 6.5, GATE_Z],
-      [-4.6, 8.6, GATE_Z],
+      [-5.3, 3.5, ENTRANCE.pillarFrontZ + 0.02],
+      [-5.2, 6.5, ENTRANCE.pillarFrontZ + 0.02],
+      [-4.6, 8.6, GATE_FACE_Z + 0.02],
     ],
     normal: [0, 0, 1],
     spread: 0.45,
@@ -494,6 +496,9 @@ function OutsideTrees() {
   );
 }
 
+/** Glazed cream for the urns at the entrance. */
+const CREAM_GLAZE = "#efe1c8";
+
 /** The looks displayed in the courtyard (each gets planting beside it). */
 const COURTYARD_LOOKS = PEDESTALS.filter((p) => p.zone === "courtyard");
 
@@ -511,12 +516,19 @@ function Garden() {
   return (
     <group>
       {/* Foreground, just outside the gate (framing the hero shot). */}
-      <PottedPlant position={[-3.2, 0, 15.9]} scale={1.7} seed={21} />
-      <PottedPlant position={[-4.7, 0, 14.4]} scale={1.05} seed={22} />
-      <CardPlant kind="fern" position={[-5.6, 0, 15.2]} scale={1.2} seed={24} />
-      <CardPlant kind="birdOfParadise" position={[3.4, 0, 15.5]} scale={1.25} seed={26} />
-      <PottedPlant position={[4.6, 0, 14.3]} scale={1.15} seed={23} />
-      <CardPlant kind="geranium" position={[5.8, 0, 16.4]} scale={1.3} seed={25} />
+      {/* Big cream urns of bougainvillea and broad leaves either side. */}
+      {[-1, 1].map((side) => (
+        <group key={side}>
+          <FloweringShrub position={[side * 3.05, 0, 15.7]} scale={1.65} seed={21 + side} potGlaze={CREAM_GLAZE} />
+          <CardPlant
+            kind="birdOfParadise"
+            position={[side * 4.2, 0, 14.6]}
+            scale={1.35}
+            seed={26 + side}
+            potGlaze={CREAM_GLAZE}
+          />
+        </group>
+      ))}
 
       {/* Olive trees in front of the side doors, flanking the hall archway. */}
       <OliveTree position={[-4.8, 0, -10.6]} seed={31} />
@@ -604,6 +616,7 @@ export function Courtyard() {
       <Climbers />
       <BlindNiches />
       <Garden />
+      <Entrance />
       <OutsideTrees />
       <Furnishings />
     </group>

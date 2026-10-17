@@ -265,7 +265,21 @@ function potGeometry(shape: PotShape) {
 /** Top-of-soil height for a pot shape at scale 1. */
 export const POT_RIM: Record<PotShape, number> = { urn: 0.92, planter: 0.66 };
 
-export function CarvedPot({ position, scale = 1, shape = "urn" }: { position: Vec3; scale?: number; shape?: PotShape }) {
+/**
+ * Carved pot. Terracotta by default; `glaze` gives a painted / glazed pot of
+ * that colour that keeps the carved relief.
+ */
+export function CarvedPot({
+  position,
+  scale = 1,
+  shape = "urn",
+  glaze,
+}: {
+  position: Vec3;
+  scale?: number;
+  shape?: PotShape;
+  glaze?: string;
+}) {
   const texture = useHeritageTexture("carvedClay", 3, 1);
   const normalMap = useHeritageTexture("carvedClayNormal", 3, 1);
   const rim = POT_RIM[shape];
@@ -273,7 +287,11 @@ export function CarvedPot({ position, scale = 1, shape = "urn" }: { position: Ve
   return (
     <group position={position} scale={scale}>
       <mesh geometry={potGeometry(shape)} castShadow receiveShadow>
-        <meshStandardMaterial map={texture} normalMap={normalMap} normalScale={[1.2, 1.2]} roughness={0.88} />
+        {glaze ? (
+          <meshStandardMaterial color={glaze} normalMap={normalMap} normalScale={[1.2, 1.2]} roughness={0.6} />
+        ) : (
+          <meshStandardMaterial map={texture} normalMap={normalMap} normalScale={[1.2, 1.2]} roughness={0.88} />
+        )}
       </mesh>
       <mesh position={[0, rim - 0.04, 0]} rotation-x={-Math.PI / 2}>
         <circleGeometry args={[soilRadius, 24]} />
@@ -310,7 +328,17 @@ export function PottedPlant({ position, scale = 1, seed = 3 }: { position: Vec3;
 }
 
 /** A potted bougainvillea bush: photographed sprays arching out over a leafy dome. */
-export function FloweringShrub({ position, scale = 1, seed = 9 }: { position: Vec3; scale?: number; seed?: number }) {
+export function FloweringShrub({
+  position,
+  scale = 1,
+  seed = 9,
+  potGlaze,
+}: {
+  position: Vec3;
+  scale?: number;
+  seed?: number;
+  potGlaze?: string;
+}) {
   const spray = useHeritageTexture("bougainvillea");
   const cardsRef = useRef<InstancedMesh>(null);
   const cardMaterial = useWindMaterial({ map: spray, alphaTest: 0.5, side: DoubleSide, roughness: 0.75 }, 0.012);
@@ -348,7 +376,7 @@ export function FloweringShrub({ position, scale = 1, seed = 9 }: { position: Ve
 
   return (
     <group position={position} scale={scale}>
-      <CarvedPot position={[0, 0, 0]} />
+      <CarvedPot position={[0, 0, 0]} glaze={potGlaze} />
       <BlobCloud blobs={leaves} wind={0.008} />
       <instancedMesh ref={cardsRef} args={[hangingCardGeometry, cardMaterial, cards.length]} castShadow receiveShadow />
     </group>
@@ -439,11 +467,13 @@ export function CardPlant({
   position,
   scale = 1,
   seed = 1,
+  potGlaze,
 }: {
   kind: CardPlantKind;
   position: Vec3;
   scale?: number;
   seed?: number;
+  potGlaze?: string;
 }) {
   const spec = CARD_PLANTS[kind];
   const texture = useHeritageTexture(spec.texture);
@@ -451,7 +481,7 @@ export function CardPlant({
   const rim = POT_RIM[spec.pot] * spec.potScale;
   return (
     <group position={position} scale={scale}>
-      <CarvedPot position={[0, 0, 0]} shape={spec.pot} scale={spec.potScale} />
+      <CarvedPot position={[0, 0, 0]} shape={spec.pot} scale={spec.potScale} glaze={potGlaze} />
       <mesh
         geometry={crossedCardGeometry}
         position={[0, rim - spec.sink, 0]}
