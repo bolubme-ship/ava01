@@ -17,7 +17,7 @@ import {
   type BufferGeometry,
 } from "three";
 import type { Vec3 } from "../config";
-import { useHeritageTexture } from "./assets";
+import { useHeritageTexture, type HeritageTextureName } from "./assets";
 import { mulberry32 } from "./random";
 import { useWindMaterial } from "./wind";
 
@@ -462,4 +462,106 @@ export function OliveTree({ position, scale = 1, seed = 7 }: { position: Vec3; s
       <instancedMesh ref={ref} args={[cardGeometry, material, cards.length]} castShadow receiveShadow />
     </group>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Photo-card plants
+
+/** The photographed plants that can stand in a pot. Sizes in metres at scale 1. */
+const CARD_PLANTS = {
+  fern: { texture: "fern", height: 1.15, aspect: 1, sink: 0.38, pot: "urn", potScale: 1 },
+  geranium: { texture: "geranium", height: 0.85, aspect: 1, sink: 0.14, pot: "urn", potScale: 0.95 },
+  palm: { texture: "palm", height: 2.9, aspect: 0.67, sink: 0.08, pot: "planter", potScale: 1.5 },
+  lemonTree: { texture: "lemonTree", height: 3.0, aspect: 0.67, sink: 0.05, pot: "planter", potScale: 1.45 },
+} as const satisfies Record<
+  string,
+  { texture: HeritageTextureName; height: number; aspect: number; sink: number; pot: PotShape; potScale: number }
+>;
+
+export type CardPlantKind = keyof typeof CARD_PLANTS;
+
+/**
+ * A photographed plant in a carved pot, shown on three crossed cards so it
+ * reads as a full plant from any angle the camera passes. `sink` lowers the
+ * cards into the pot so trailing fronds spill over the rim.
+ */
+export function CardPlant({
+  kind,
+  position,
+  scale = 1,
+  seed = 1,
+}: {
+  kind: CardPlantKind;
+  position: Vec3;
+  scale?: number;
+  seed?: number;
+}) {
+  const spec = CARD_PLANTS[kind];
+  const texture = useHeritageTexture(spec.texture);
+  const turn = useMemo(() => mulberry32(seed)() * Math.PI, [seed]);
+  const rim = POT_RIM[spec.pot] * spec.potScale;
+  return (
+    <group position={position} scale={scale}>
+      <CarvedPot position={[0, 0, 0]} shape={spec.pot} scale={spec.potScale} />
+      {[0, 1, 2].map((k) => (
+        <mesh
+          key={k}
+          geometry={standingCardGeometry}
+          position={[0, rim - spec.sink, 0]}
+          rotation-y={turn + (k * Math.PI) / 3}
+          scale={[spec.height * spec.aspect, spec.height, 1]}
+          castShadow
+        >
+          <meshStandardMaterial map={texture} alphaTest={0.5} side={DoubleSide} roughness={0.7} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/**
+ * Curtains of trailing ivy hanging from a line along a wall top or arch,
+ * each strand a photographed vine card of varied length, swaying gently.
+ */
+export function IvyCurtain({
+  path,
+  normal,
+  spacing = 0.32,
+  length = 1.6,
+  seed = 1,
+}: {
+  path: Vec3[];
+  normal: Vec3;
+  spacing?: number;
+  length?: number;
+  seed?: number;
+}) {
+  const ivy = useHeritageTexture("ivy");
+  const ref = useRef<InstancedMesh>(null);
+  const material = useWindMaterial({ map: ivy, alphaTest: 0.5, side: DoubleSide, roughness: 0.65 }, 0.02);
+
+  const strands = useMemo(() => {
+    const rand = mulberry32(seed);
+    const n = new Vector3(...normal).normalize();
+    const facing = Math.atan2(n.x, n.z);
+    const pts = path.map((p) => new Vector3(...p));
+    const out: Blob[] = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const count = Math.ceil(pts[i].distanceTo(pts[i + 1]) / spacing);
+      for (let k = 0; k < count; k++) {
+        const p = new Vector3().lerpVectors(pts[i], pts[i + 1], (k + rand()) / count);
+        const h = length * (0.55 + rand() * 0.7);
+        out.push({
+          position: p.addScaledVector(n, 0.03 + rand() * 0.08),
+          scale: new Vector3(h * 0.67, h, 1),
+          rotation: new Vector3(0.04 + rand() * 0.1, facing + (rand() - 0.5) * 0.5, (rand() - 0.5) * 0.15),
+          color: "#ffffff",
+        });
+      }
+    }
+    return out;
+  }, [path, normal, spacing, length, seed]);
+  useInstances(ref, strands);
+
+  return <instancedMesh ref={ref} args={[hangingCardGeometry, material, strands.length]} castShadow receiveShadow />;
 }

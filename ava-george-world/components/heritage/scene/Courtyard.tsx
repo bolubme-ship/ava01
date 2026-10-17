@@ -6,7 +6,7 @@ import { ExtrudeGeometry, Shape, ShapeGeometry } from "three";
 import { COURTYARD, GATE, HALL, PALETTE, PEDESTALS, type Vec3 } from "../config";
 import { ArchedWall, archBandShape, type ArchOpening, type ArchTrim } from "./ArchedWall";
 import { CanopySail, Kilim, WallSconce } from "./Fabrics";
-import { Bougainvillea, CarvedPot, CitrusTree, FloweringShrub, OliveTree, PottedPlant } from "./Planting";
+import { Bougainvillea, CardPlant, CarvedPot, CitrusTree, FloweringShrub, IvyCurtain, OliveTree, PottedPlant } from "./Planting";
 import { useHeritageTexture } from "./assets";
 import { useSurfaceTexture } from "./surfaceTexture";
 
@@ -382,11 +382,27 @@ const CLIMBERS: {
   },
 ];
 
+/** Ivy spilling over the wall tops between the bougainvillea. */
+const IVY: { path: Vec3[]; normal: Vec3; length?: number; seed: number }[] = [
+  // Left wall, from the citrus tree back towards the olive grove.
+  { path: [[-HALF_X + 0.32, 5.0, 3.0], [-HALF_X + 0.32, 5.1, -3.0], [-HALF_X + 0.32, 5.0, -9.0]], normal: [1, 0, 0], seed: 71 },
+  // Right wall, opposite the first two looks.
+  { path: [[HALF_X - 0.32, 5.0, 4.0], [HALF_X - 0.32, 5.1, -2.5]], normal: [-1, 0, 0], seed: 72 },
+  // Back wall, either side of the hall archway.
+  { path: [[-5.5, 7.1, -HALF_Z + 0.32], [-2.0, 7.0, -HALF_Z + 0.32]], normal: [0, 0, 1], length: 2.2, seed: 73 },
+  { path: [[2.0, 7.0, -HALF_Z + 0.32], [5.5, 7.1, -HALF_Z + 0.32]], normal: [0, 0, 1], length: 2.2, seed: 74 },
+  // Outer face of the gatehouse, right of the arch.
+  { path: [[4.3, 9.0, GATE_FACE_Z + 0.03], [5.4, 8.8, GATE_FACE_Z + 0.03]], normal: [0, 0, 1], length: 3.2, seed: 75 },
+];
+
 function Climbers() {
   return (
     <group>
       {CLIMBERS.map((c) => (
         <Bougainvillea key={c.seed} {...c} />
+      ))}
+      {IVY.map((c) => (
+        <IvyCurtain key={c.seed} {...c} />
       ))}
     </group>
   );
@@ -441,6 +457,15 @@ function BlindNiches() {
 /** The looks displayed in the courtyard (each gets planting beside it). */
 const COURTYARD_LOOKS = PEDESTALS.filter((p) => p.zone === "courtyard");
 
+/** A rotating mix of potted plants, so no two displays are planted alike. */
+const DISPLAY_PLANTS = ["fern", "geranium", "agave", "bougainvillea"] as const;
+
+function DisplayPlant({ kind, position, scale, seed }: { kind: (typeof DISPLAY_PLANTS)[number]; position: Vec3; scale: number; seed: number }) {
+  if (kind === "agave") return <PottedPlant position={position} scale={scale} seed={seed} />;
+  if (kind === "bougainvillea") return <FloweringShrub position={position} scale={scale * 1.05} seed={seed} />;
+  return <CardPlant kind={kind} position={position} scale={scale} seed={seed} />;
+}
+
 /** Trees, shrubs and carved pots placed clear of the looks and camera sightlines. */
 function Garden() {
   return (
@@ -448,38 +473,54 @@ function Garden() {
       {/* Foreground, just outside the gate (framing the hero shot). */}
       <PottedPlant position={[-3.2, 0, 15.9]} scale={1.7} seed={21} />
       <PottedPlant position={[-4.7, 0, 14.4]} scale={1.05} seed={22} />
+      <CardPlant kind="fern" position={[-5.6, 0, 15.2]} scale={1.2} seed={24} />
       <CarvedPot position={[3.4, 0, 15.5]} scale={1.5} />
       <PottedPlant position={[4.6, 0, 14.3]} scale={1.15} seed={23} />
+      <CardPlant kind="geranium" position={[5.8, 0, 16.4]} scale={1.3} seed={25} />
 
       {/* Olive trees in front of the side doors, flanking the hall archway. */}
       <OliveTree position={[-4.8, 0, -10.6]} seed={31} />
       <OliveTree position={[4.8, 0, -10.6]} seed={32} />
-      {/* Citrus trees part-way down each side. */}
+      {/* Citrus and lemon trees part-way down each side. */}
       <CitrusTree position={[-7.7, 0, 1.0]} scale={0.95} seed={33} />
       <CitrusTree position={[7.7, 0, -2.6]} scale={0.95} seed={34} />
+      <CardPlant kind="lemonTree" position={[-7.7, 0, -4.5]} seed={35} />
+      <CardPlant kind="lemonTree" position={[7.7, 0, 4.5]} seed={36} />
 
-      {/* Flowering pots and greenery beside every courtyard display. */}
+      {/* Varied potted planting beside every courtyard display. */}
       {COURTYARD_LOOKS.map((p, i) => {
         const [x, , z] = p.position;
         const out = Math.sign(x);
         return (
           <group key={p.id}>
-            <FloweringShrub position={[x + out * 1.35, 0, z - 0.55]} scale={0.78} seed={50 + i} />
-            <PottedPlant position={[x + out * 1.2, 0, z + 0.95]} scale={0.72} seed={60 + i} />
+            <DisplayPlant
+              kind={DISPLAY_PLANTS[i % 4]}
+              position={[x + out * 1.35, 0, z - 0.55]}
+              scale={0.78}
+              seed={50 + i}
+            />
+            <DisplayPlant
+              kind={DISPLAY_PLANTS[(i + 2) % 4]}
+              position={[x + out * 1.2, 0, z + 0.95]}
+              scale={0.72}
+              seed={60 + i}
+            />
           </group>
         );
       })}
 
-      {/* Flowering shrubs and urns along the walls. */}
+      {/* Palms in the corners; shrubs, urns and ferns along the walls. */}
+      <CardPlant kind="palm" position={[-8.8, 0, 11.0]} seed={43} />
+      <CardPlant kind="palm" position={[9.1, 0, 11.0]} scale={0.95} seed={45} />
+      <CardPlant kind="palm" position={[-9.1, 0, -11.2]} scale={1.05} seed={47} />
+      <CardPlant kind="palm" position={[9.1, 0, -11.2]} seed={48} />
       <FloweringShrub position={[-2.75, 0, -11.2]} scale={0.85} seed={41} />
       <FloweringShrub position={[2.75, 0, -11.2]} scale={0.85} seed={42} />
-      <FloweringShrub position={[-8.8, 0, 11.0]} seed={43} />
       <FloweringShrub position={[8.9, 0, -6.6]} scale={0.9} seed={44} />
-      <CarvedPot position={[-9.1, 0, -11.2]} scale={1.3} />
-      <CarvedPot position={[-8.3, 0, -11.5]} scale={0.9} />
-      <CarvedPot position={[9.1, 0, -11.2]} scale={1.3} />
-      <CarvedPot position={[9.1, 0, 11.0]} scale={1.2} />
-      <PottedPlant position={[-9.0, 0, -7.2]} scale={1.1} seed={46} />
+      <CarvedPot position={[-8.0, 0, -11.6]} scale={0.9} />
+      <CardPlant kind="fern" position={[-9.0, 0, -7.2]} scale={1.1} seed={46} />
+      <CardPlant kind="geranium" position={[9.0, 0, 8.2]} scale={1.1} seed={49} />
+      <CardPlant kind="fern" position={[-9.0, 0, 8.6]} seed={40} />
     </group>
   );
 }
