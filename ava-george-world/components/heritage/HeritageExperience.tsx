@@ -78,6 +78,8 @@ export function HeritageExperience() {
               <div className="sticky top-0">
                 <Hero chapter={chapter} onExplore={() => scrollToStop(1)} />
               </div>
+            ) : chapter.silent ? (
+              <h2 className="sr-only">{chapter.title}</h2>
             ) : (
               <div className="sticky top-0 flex h-svh items-end px-4 pb-14 sm:px-10 sm:pb-20 lg:px-16">
                 {/* Local shade behind the copy, so it reads over bright floor and walls. */}

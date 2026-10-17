@@ -39,6 +39,8 @@ export interface Chapter {
   eyebrow: string;
   title: string;
   body: string;
+  /** Stop with no on-screen copy: the scene speaks for itself. */
+  silent?: boolean;
 }
 
 /**
@@ -215,11 +217,8 @@ const STOPS: Stop[] = [
   },
   {
     station: AVENUE_STATION,
-    chapter: {
-      eyebrow: "The Courtyard",
-      title: "Welcome In",
-      body: "Five looks line the rug in the sun. Five more wait in the round hall beyond the arch.",
-    },
+    // No overlay copy here: the view down the courtyard is the moment.
+    chapter: { eyebrow: "The Courtyard", title: "The Courtyard", body: "", silent: true },
   },
   ...PEDESTALS.slice(0, OUTDOOR_COUNT).map((p, i) => ({
     station: PEDESTAL_STATIONS[i],
