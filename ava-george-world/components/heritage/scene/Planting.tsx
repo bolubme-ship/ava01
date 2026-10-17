@@ -511,3 +511,42 @@ export function IvyCurtain({
 
   return <instancedMesh ref={ref} args={[hangingCardGeometry, material, strands.length]} castShadow receiveShadow />;
 }
+
+// ---------------------------------------------------------------------------
+// Tall trees
+
+/** Photographed trees that stand in the ground. Sizes in metres at scale 1. */
+const TALL_TREES = {
+  datePalm: { texture: "datePalm", height: 11, aspect: 0.6 },
+  flameTree: { texture: "flameTree", height: 9.5, aspect: 0.684 },
+  acacia: { texture: "acacia", height: 9, aspect: 0.715 },
+} as const satisfies Record<string, { texture: HeritageTextureName; height: number; aspect: number }>;
+
+export type TallTreeKind = keyof typeof TALL_TREES;
+
+/**
+ * Every tree of one kind, each on three crossed cards, drawn together as one
+ * instanced mesh. The canopy sways in the breeze while the trunk stays rooted.
+ */
+export function TallTrees({ kind, trees }: { kind: TallTreeKind; trees: { position: Vec3; scale?: number }[] }) {
+  const spec = TALL_TREES[kind];
+  const texture = useHeritageTexture(spec.texture);
+  const ref = useRef<InstancedMesh>(null);
+  const material = useWindMaterial({ map: texture, alphaTest: 0.5, side: DoubleSide, roughness: 0.8 }, 0.12, true);
+
+  const blobs = useMemo(() => {
+    const rand = mulberry32(trees.length * 31 + spec.height * 7);
+    return trees.map(({ position, scale = 1 }): Blob => {
+      const s = scale * (0.92 + rand() * 0.16);
+      return {
+        position: new Vector3(...position),
+        scale: new Vector3(spec.height * spec.aspect * s, spec.height * s, spec.height * spec.aspect * s),
+        rotation: new Vector3(0, rand() * Math.PI, 0),
+        color: "#ffffff",
+      };
+    });
+  }, [trees, spec]);
+  useInstances(ref, blobs);
+
+  return <instancedMesh ref={ref} args={[crossedCardGeometry, material, blobs.length]} castShadow receiveShadow />;
+}

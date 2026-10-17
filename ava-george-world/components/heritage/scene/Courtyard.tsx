@@ -6,7 +6,7 @@ import { ExtrudeGeometry, Shape, ShapeGeometry } from "three";
 import { COURTYARD, GATE, HALL, PALETTE, PEDESTALS, type Vec3 } from "../config";
 import { ArchedWall, archBandShape, type ArchOpening, type ArchTrim } from "./ArchedWall";
 import { CanopySail, Kilim, WallSconce } from "./Fabrics";
-import { Bougainvillea, CardPlant, CarvedPot, FloweringShrub, IvyCurtain, OliveTree, PottedPlant } from "./Planting";
+import { Bougainvillea, CardPlant, CarvedPot, FloweringShrub, IvyCurtain, OliveTree, PottedPlant, TallTrees } from "./Planting";
 import { useHeritageTexture } from "./assets";
 import { useSurfaceTexture } from "./surfaceTexture";
 
@@ -454,6 +454,46 @@ function BlindNiches() {
   );
 }
 
+/*
+ * Tall trees growing outside the walls: date palms, flame trees and acacias
+ * whose crowns rise above the wall tops, and a few flanking the approach to
+ * the gate, so the courtyard sits in a garden rather than on its own.
+ */
+const DATE_PALMS: { position: Vec3; scale?: number }[] = [
+  { position: [-7.9, 0, 15.2] },
+  { position: [8.2, 0, 15.6], scale: 0.95 },
+  { position: [-13.2, 0, 8.5], scale: 1.1 },
+  { position: [13.6, 0, 5.5] },
+  { position: [-14.6, 0, -1.5], scale: 0.9 },
+  { position: [-11.8, 0, -15.8], scale: 1.15 },
+  { position: [12.4, 0, -16.2], scale: 1.05 },
+  // Behind the back corners, seen through the gate arch from the first view.
+  { position: [-9.6, 0, -13.8], scale: 1.1 },
+  { position: [9.9, 0, -14.0], scale: 1.15 },
+];
+const FLAME_TREES: { position: Vec3; scale?: number }[] = [
+  { position: [-10.6, 0, 18.4] },
+  { position: [-13.8, 0, -7.5], scale: 1.05 },
+  { position: [13.4, 0, 12.6], scale: 0.95 },
+  { position: [-12.8, 0, -19.5], scale: 1.15 },
+];
+const ACACIAS: { position: Vec3; scale?: number }[] = [
+  { position: [11.4, 0, 19.2] },
+  { position: [14.2, 0, -10.5], scale: 1.1 },
+  { position: [-14.4, 0, 14.6], scale: 0.9 },
+  { position: [12.9, 0, -20.6], scale: 1.2 },
+];
+
+function OutsideTrees() {
+  return (
+    <group>
+      <TallTrees kind="datePalm" trees={DATE_PALMS} />
+      <TallTrees kind="flameTree" trees={FLAME_TREES} />
+      <TallTrees kind="acacia" trees={ACACIAS} />
+    </group>
+  );
+}
+
 /** The looks displayed in the courtyard (each gets planting beside it). */
 const COURTYARD_LOOKS = PEDESTALS.filter((p) => p.zone === "courtyard");
 
@@ -564,6 +604,7 @@ export function Courtyard() {
       <Climbers />
       <BlindNiches />
       <Garden />
+      <OutsideTrees />
       <Furnishings />
     </group>
   );
