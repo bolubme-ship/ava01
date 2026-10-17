@@ -19,6 +19,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import type { Vec3 } from "../config";
 import { useHeritageTexture, type HeritageTextureName } from "./assets";
 import { mulberry32 } from "./random";
+import { useBillboardMaterials } from "./billboard";
 import { useWindMaterial } from "./wind";
 
 /*
@@ -554,15 +555,19 @@ const TALL_TREES = {
 
 export type TallTreeKind = keyof typeof TALL_TREES;
 
+/** Unit card standing on its bottom edge, turned to the viewer by the billboard material. */
+const treeCardGeometry = new PlaneGeometry(1, 1).translate(0, 0.5, 0);
+
 /**
- * Every tree of one kind, each on three crossed cards, drawn together as one
- * instanced mesh. The canopy sways in the breeze while the trunk stays rooted.
+ * Every tree of one kind, drawn together as one instanced mesh of
+ * camera-facing photo cards (see billboard.ts): unlit so the photo keeps
+ * its own light, hazed with distance, the canopy swaying on a rooted trunk.
  */
 export function TallTrees({ kind, trees }: { kind: TallTreeKind; trees: { position: Vec3; scale?: number }[] }) {
   const spec = TALL_TREES[kind];
   const texture = useHeritageTexture(spec.texture);
   const ref = useRef<InstancedMesh>(null);
-  const material = useWindMaterial({ map: texture, alphaTest: 0.5, side: DoubleSide, roughness: 0.8 }, 0.12, true);
+  const { material, depthMaterial } = useBillboardMaterials(texture);
 
   const blobs = useMemo(() => {
     const rand = mulberry32(trees.length * 31 + spec.height * 7);
@@ -570,13 +575,21 @@ export function TallTrees({ kind, trees }: { kind: TallTreeKind; trees: { positi
       const s = scale * (0.92 + rand() * 0.16);
       return {
         position: new Vector3(...position),
-        scale: new Vector3(spec.height * spec.aspect * s, spec.height * s, spec.height * spec.aspect * s),
-        rotation: new Vector3(0, rand() * Math.PI, 0),
+        scale: new Vector3(spec.height * spec.aspect * s, spec.height * s, 1),
+        rotation: new Vector3(),
         color: "#ffffff",
       };
     });
   }, [trees, spec]);
   useInstances(ref, blobs);
 
-  return <instancedMesh ref={ref} args={[crossedCardGeometry, material, blobs.length]} castShadow receiveShadow />;
+  return (
+    <instancedMesh
+      ref={ref}
+      args={[treeCardGeometry, material, blobs.length]}
+      customDepthMaterial={depthMaterial}
+      castShadow
+      frustumCulled={false}
+    />
+  );
 }
