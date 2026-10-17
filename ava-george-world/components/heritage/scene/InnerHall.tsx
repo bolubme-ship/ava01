@@ -7,6 +7,7 @@ import {
   DoubleSide,
   ExtrudeGeometry,
   Matrix4,
+  Object3D,
   PlaneGeometry,
   Shape,
   ShapeGeometry,
@@ -249,12 +250,13 @@ function Floor() {
   );
 }
 
-/** Direction the sun's shafts travel: down, and a little to the left as seen from the door. */
-const RAY_DIRECTION = new Vector3(-0.42, -1, 0.16).normalize();
+/** Where the skylight's shafts converge: the finale look on the dais, at chest height. */
+const SHAFT_FOCUS = new Vector3(0, HALL.daisHeight + 1.15, CZ);
 
 /**
- * Shafts of sunlight falling through the skylight: soft additive cards in
- * crossed pairs, merged into one draw, with a warm pool where they land.
+ * Shafts of sunlight falling through the skylight onto the finale look:
+ * soft additive cards in crossed pairs, merged into one draw, a warm pool on
+ * the dais, and a spotlight from the skylight that lights the cloth itself.
  */
 function SunShafts() {
   const ray = useProceduralTexture("lightRay");
@@ -262,16 +264,19 @@ function SunShafts() {
   const geometry = useMemo(() => {
     const rand = mulberry32(17);
     const top = H + RISE;
-    const length = top / -RAY_DIRECTION.y;
-    const up = RAY_DIRECTION.clone().negate();
-    const across = new Vector3().crossVectors(up, new Vector3(0, 0, 1)).normalize();
-    const facing = new Vector3().crossVectors(across, up);
     const cards = [];
     for (let i = 0; i < 10; i++) {
       const a = rand() * Math.PI * 2;
-      const r = Math.sqrt(rand()) * OCULUS * 0.75;
+      const r = Math.sqrt(rand()) * OCULUS * 0.8;
       const origin = new Vector3(Math.cos(a) * r, top, CZ + Math.sin(a) * r);
-      const width = 0.35 + rand() * 0.6;
+      // Aim at the look, spread a little so the shafts wrap around it.
+      const aim = SHAFT_FOCUS.clone().add(new Vector3((rand() - 0.5) * 0.9, -0.6, (rand() - 0.5) * 0.9));
+      const direction = aim.sub(origin).normalize();
+      const length = (top - HALL.daisHeight) / -direction.y;
+      const up = direction.negate();
+      const across = new Vector3().crossVectors(up, new Vector3(0, 0, 1)).normalize();
+      const facing = new Vector3().crossVectors(across, up);
+      const width = 0.35 + rand() * 0.5;
       for (const [x, z] of [
         [across, facing],
         [facing, across.clone().negate()],
@@ -283,15 +288,19 @@ function SunShafts() {
     }
     return mergeGeometries(cards);
   }, []);
+  const target = useMemo(() => {
+    const t = new Object3D();
+    t.position.copy(SHAFT_FOCUS);
+    return t;
+  }, []);
 
-  const landing = RAY_DIRECTION.clone().multiplyScalar((H + RISE) / -RAY_DIRECTION.y);
   return (
     <group>
       <mesh geometry={geometry}>
         <meshBasicMaterial
           map={ray}
           transparent
-          opacity={0.13}
+          opacity={0.16}
           blending={AdditiveBlending}
           depthWrite={false}
           side={DoubleSide}
@@ -299,19 +308,29 @@ function SunShafts() {
           fog={false}
         />
       </mesh>
-      <mesh position={[landing.x, 0.02, CZ + landing.z]} rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[4.2, 3.4]} />
+      <mesh position={[0, HALL.daisHeight + 0.008, CZ]} rotation-x={-Math.PI / 2}>
+        <planeGeometry args={[3.4, 3.4]} />
         <meshBasicMaterial
           map={pool}
           transparent
-          opacity={0.32}
+          opacity={0.38}
           blending={AdditiveBlending}
           depthWrite={false}
           toneMapped={false}
           fog={false}
         />
       </mesh>
-      <pointLight color="#ffe2b8" intensity={26} distance={10} decay={2} position={[0, 4.6, CZ]} />
+      <primitive object={target} />
+      <spotLight
+        color="#ffe6c0"
+        intensity={240}
+        distance={12}
+        decay={2}
+        angle={0.36}
+        penumbra={0.7}
+        position={[0, H + RISE, CZ]}
+        target={target}
+      />
     </group>
   );
 }
