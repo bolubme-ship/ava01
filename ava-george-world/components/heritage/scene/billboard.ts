@@ -49,7 +49,7 @@ const BILLBOARD_VERTEX = `
 /** Haze strength by view distance (metres) and its maximum. */
 const HAZE_NEAR = 8;
 const HAZE_FAR = 45;
-const HAZE_MAX = 0.32;
+const HAZE_MAX = 0.14;
 
 export function useBillboardMaterials(map: Texture, sway = 0.12) {
   const animate = useAmbientMotion();
@@ -64,9 +64,9 @@ export function useBillboardMaterials(map: Texture, sway = 0.12) {
 
     const material = new MeshBasicMaterial({
       map,
-      alphaTest: 0.3,
-      // Smooths the cut-out's edge where multisampling is on.
-      alphaToCoverage: true,
+      // A firm cut-out edge: softer edges (alpha to coverage) let a pale
+      // rim of the bright sky show round every leaf.
+      alphaTest: 0.5,
       side: DoubleSide,
       color: "#f6eee2",
     });
