@@ -3,6 +3,7 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import {
   CircleGeometry,
+  PlaneGeometry,
   Color,
   DoubleSide,
   IcosahedronGeometry,
@@ -17,6 +18,7 @@ import {
   type BufferGeometry,
 } from "three";
 import type { Vec3 } from "../config";
+import { useHeritageTexture } from "./assets";
 import { useProceduralTexture } from "./proceduralTextures";
 import { mulberry32 } from "./random";
 import { useWindMaterial } from "./wind";
@@ -389,31 +391,41 @@ export function FloweringShrub({ position, scale = 1, seed = 9 }: { position: Ve
 // ---------------------------------------------------------------------------
 // Olive tree
 
-const OLIVE_COLORS = ["#7f9a62", "#93a874", "#6c8752", "#a3b38a", "#5f7a48"];
+/** Unit card for photographed foliage cut-outs. */
+const cardGeometry = new PlaneGeometry(1, 1);
 
-/** Multi-stemmed olive in a planter: open, airy crown of narrow silver-green leaves. */
+/**
+ * Multi-stemmed olive in a planter. The crown is built from cards of a
+ * photographed olive branch (alpha cut-out), turned every which way around
+ * three lobes, so it reads as real foliage and casts real dappled shade.
+ */
 export function OliveTree({ position, scale = 1, seed = 7 }: { position: Vec3; scale?: number; seed?: number }) {
-  const leaves = useMemo(() => {
+  const branch = useHeritageTexture("oliveBranch");
+  const ref = useRef<InstancedMesh>(null);
+  const material = useWindMaterial({ map: branch, alphaTest: 0.5, side: DoubleSide, roughness: 0.8 }, 0.015);
+
+  const cards = useMemo(() => {
     const rand = mulberry32(seed);
     const lobes = [
-      new Vector3(-0.35, 2.35, 0.1),
-      new Vector3(0.4, 2.55, -0.15),
-      new Vector3(0.05, 3.0, 0.2),
+      new Vector3(-0.35, 2.3, 0.1),
+      new Vector3(0.4, 2.5, -0.15),
+      new Vector3(0.05, 2.95, 0.2),
     ];
     const out: Blob[] = [];
-    for (let i = 0; i < 1100; i++) {
+    for (let i = 0; i < 54; i++) {
       const lobe = lobes[i % lobes.length];
       const dir = new Vector3(rand() * 2 - 1, (rand() * 2 - 1) * 0.7, rand() * 2 - 1).normalize();
-      const s = 0.05 + rand() * 0.025;
+      const s = 0.75 + rand() * 0.45;
       out.push({
-        position: lobe.clone().addScaledVector(dir, 0.62 * (0.45 + rand() * 0.6)),
-        scale: new Vector3(s * 0.38, s * 1.7, 1),
-        rotation: new Vector3(rand() * 6.28, rand() * 6.28, rand() * 6.28),
-        color: OLIVE_COLORS[Math.floor(rand() * OLIVE_COLORS.length)],
+        position: lobe.clone().addScaledVector(dir, 0.35 + rand() * 0.3),
+        scale: new Vector3(s, s, 1),
+        rotation: new Vector3((rand() - 0.5) * 1.6, rand() * Math.PI * 2, (rand() - 0.5) * 1.2),
+        color: "#ffffff",
       });
     }
     return out;
   }, [seed]);
+  useInstances(ref, cards);
 
   return (
     <group position={position} scale={scale}>
@@ -430,12 +442,7 @@ export function OliveTree({ position, scale = 1, seed = 7 }: { position: Vec3; s
           <meshStandardMaterial color="#6b5a46" roughness={0.95} />
         </mesh>
       ))}
-      {/* Sparse inner volume so the airy crown still casts dappled shade. */}
-      <mesh position={[0, 2.6, 0]} scale={[0.85, 0.6, 0.8]} castShadow>
-        <icosahedronGeometry args={[1, 1]} />
-        <meshStandardMaterial color="#56703f" roughness={0.9} transparent opacity={0} depthWrite={false} />
-      </mesh>
-      <BlobCloud blobs={leaves} wind={0.01} />
+      <instancedMesh ref={ref} args={[cardGeometry, material, cards.length]} castShadow receiveShadow />
     </group>
   );
 }

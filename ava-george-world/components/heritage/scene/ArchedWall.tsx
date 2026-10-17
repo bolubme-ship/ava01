@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { ExtrudeGeometry, Path, Shape } from "three";
 import type { Vec3 } from "../config";
+import { useHeritageTexture } from "./assets";
 import { useSurfaceTexture } from "./surfaceTexture";
 
 export interface ArchOpening {
@@ -55,7 +56,7 @@ export function archBandShape(x: number, bottom: number, radius: number, spring:
 }
 
 /**
- * A thick plaster wall with round-topped doorways and windows, built by
+ * A thick terracotta-plaster wall with round-topped doorways and windows, built by
  * extruding a 2D outline. Doorways are notched into the outline itself
  * (holes touching the edge would break triangulation); windows are holes.
  */
@@ -119,13 +120,22 @@ export function ArchedWall({
     return { geo, trimDepth };
   }, [trim, openings]);
 
-  // Extrude UVs are in metres, so this tiles the grain every ~4m.
+  // Extrude UVs are in metres: the photographed plaster repeats every ~2.5 m.
+  const plaster = useHeritageTexture("plaster", 0.4);
+  const plasterNormal = useHeritageTexture("plasterNormal", 0.4);
+  // Mouldings keep the pale lime-wash grain so they read as a separate finish.
   const texture = useSurfaceTexture(0.25);
 
   return (
     <group position={position} rotation-y={rotationY}>
       <mesh geometry={geometry} castShadow receiveShadow>
-        <meshStandardMaterial color={color} map={texture} bumpMap={texture} bumpScale={2.5} roughness={0.95} />
+        <meshStandardMaterial
+          color={color}
+          map={plaster}
+          normalMap={plasterNormal}
+          normalScale={[0.9, 0.9]}
+          roughness={0.92}
+        />
       </mesh>
       {trim && trimGeometry && (
         <>

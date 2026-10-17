@@ -263,8 +263,12 @@ export const PALETTE = {
   haze: "#f1d9bd",
   skyHorizon: "#e4eef6",
   skyZenith: "#2b78d0",
-  wallWarm: "#cc7a48",
-  wallLight: "#d98a55",
+  /*
+   * Walls use a photographed terracotta plaster texture; these are tints
+   * multiplied over it (white = the plaster's own colour).
+   */
+  wallWarm: "#ecd3c3",
+  wallLight: "#ffffff",
   wallTrim: "#eec594",
   niche: "#b4653a",
   canopyTerracotta: "#c8733f",

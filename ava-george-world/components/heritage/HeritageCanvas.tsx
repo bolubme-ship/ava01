@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import { Suspense, type RefObject } from "react";
 import { Canvas } from "@react-three/fiber";
 import { CAMERA_STATIONS, PALETTE, PEDESTALS, facingRotation } from "./config";
 import { CameraRig } from "./camera/CameraRig";
@@ -55,22 +55,25 @@ export default function HeritageCanvas({
         <Clouds />
 
         <Lighting />
-        <Courtyard />
-        <InnerHall />
-        {PEDESTALS.map((p, i) => (
-          <DisplayPedestal
-            key={p.id}
-            position={p.position}
-            rotationY={facingRotation(i)}
-            silhouette={p.silhouette}
-            fabric={p.fabric}
-            accent={p.accent}
-            animate={!reducedMotion}
-            label={`Look ${String(i + 1).padStart(2, "0")}`}
-            onSelect={() => onSelectLook(i)}
-            labelLayer={labelLayer}
-          />
-        ))}
+        {/* Photographic textures stream in; the scene appears once they're ready. */}
+        <Suspense fallback={null}>
+          <Courtyard />
+          <InnerHall />
+          {PEDESTALS.map((p, i) => (
+            <DisplayPedestal
+              key={p.id}
+              position={p.position}
+              rotationY={facingRotation(i)}
+              silhouette={p.silhouette}
+              fabric={p.fabric}
+              accent={p.accent}
+              animate={!reducedMotion}
+              label={`Look ${String(i + 1).padStart(2, "0")}`}
+              onSelect={() => onSelectLook(i)}
+              labelLayer={labelLayer}
+            />
+          ))}
+        </Suspense>
 
         <CameraRig progress={progress} reducedMotion={reducedMotion} />
       </AmbientMotionContext.Provider>

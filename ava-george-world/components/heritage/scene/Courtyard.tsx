@@ -7,7 +7,7 @@ import { COURTYARD, GATE, HALL, PALETTE, PEDESTALS, type Vec3 } from "../config"
 import { ArchedWall, archBandShape, type ArchOpening, type ArchTrim } from "./ArchedWall";
 import { CanopySail, Kilim, WallSconce } from "./Fabrics";
 import { Bougainvillea, CarvedPot, CitrusTree, FloweringShrub, OliveTree, PottedPlant } from "./Planting";
-import { useProceduralTexture } from "./proceduralTextures";
+import { useHeritageTexture } from "./assets";
 import { useSurfaceTexture } from "./surfaceTexture";
 
 /*
@@ -67,29 +67,31 @@ function onGateArch(radius: number, degrees: number, z = GATE_FACE_Z + 0.02): Ve
 }
 
 function Ground() {
-  const tiles = useProceduralTexture("stoneTiles", 30, 30);
-  const rug = useProceduralTexture("rug", 1, 2.6);
-  const sideRug = useProceduralTexture("rug", 1, 0.32);
+  // Photographed limestone repeats every 4 m; the rug image covers 3 m x 4.5 m.
+  const tiles = useHeritageTexture("limestone", 30, 30);
+  const tilesNormal = useHeritageTexture("limestoneNormal", 30, 30);
   const rugStart = GATE_FACE_Z + 1.4;
   const rugEnd = -HALF_Z + 0.4;
   const rugLength = rugStart - rugEnd;
+  const rug = useHeritageTexture("rug", 1, rugLength / 4.5);
+  const sideRug = useHeritageTexture("rug", 1, 3.4 / 3.3);
   return (
     <group>
       <mesh rotation-x={-Math.PI / 2} receiveShadow>
         <planeGeometry args={[120, 120]} />
-        <meshStandardMaterial map={tiles} bumpMap={tiles} bumpScale={1.2} roughness={0.72} />
+        <meshStandardMaterial map={tiles} normalMap={tilesNormal} normalScale={[0.8, 0.8]} roughness={0.68} />
       </mesh>
       {/* Smaller rugs either side of the entrance, as in a lived-in courtyard. */}
       {[-1, 1].map((side) => (
         <mesh key={side} position={[side * 6.4, 0.01, 8.6]} rotation-y={side * 0.06} receiveShadow>
           <boxGeometry args={[2.2, 0.014, 3.4]} />
-          <meshStandardMaterial map={sideRug} roughness={0.95} />
+          <meshStandardMaterial map={sideRug} roughness={0.97} />
         </mesh>
       ))}
       {/* Red runner from just outside the gate to the hall doorway. */}
       <mesh position={[0, 0.012, (rugStart + rugEnd) / 2]} receiveShadow>
         <boxGeometry args={[3, 0.02, rugLength]} />
-        <meshStandardMaterial map={rug} roughness={0.95} />
+        <meshStandardMaterial map={rug} roughness={0.97} />
       </mesh>
     </group>
   );
@@ -170,6 +172,7 @@ function Silhouette() {
   const backPinnacles = range(-9, 9, 1.8);
   const frontPinnacles = range(-9, 9, 2.25).filter((x) => Math.abs(x) > GATE.towerHalfWidth + 0.4);
   const gatePinnacles = range(-4.8, 4.8, 1.6);
+  const plaster = useHeritageTexture("plaster", 1, 3);
 
   return (
     <group>
@@ -178,7 +181,7 @@ function Silhouette() {
         return (
           <mesh key={i} position={[x, h / 2, z]} rotation-y={Math.PI / 4} castShadow receiveShadow>
             <cylinderGeometry args={[0.55, 0.95, h, 4]} />
-            <meshStandardMaterial color={PALETTE.wallWarm} roughness={0.95} flatShading />
+            <meshStandardMaterial color={PALETTE.wallWarm} map={plaster} roughness={0.95} flatShading />
           </mesh>
         );
       })}
