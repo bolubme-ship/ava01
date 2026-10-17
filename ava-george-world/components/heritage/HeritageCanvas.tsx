@@ -5,7 +5,6 @@ import { Canvas } from "@react-three/fiber";
 import { CAMERA_STATIONS, PALETTE, PEDESTALS, facingRotation } from "./config";
 import { CameraRig } from "./camera/CameraRig";
 import type { ScrollProgress } from "./hooks/useScrollProgress";
-import { Clouds } from "./scene/Clouds";
 import { Courtyard } from "./scene/Courtyard";
 import { DisplayPedestal } from "./scene/DisplayPedestal";
 import { InnerHall } from "./scene/InnerHall";
@@ -51,12 +50,11 @@ export default function HeritageCanvas({
       <AmbientMotionContext.Provider value={!reducedMotion}>
         <color attach="background" args={[PALETTE.haze]} />
         <fog attach="fog" args={[PALETTE.haze, 40, 140]} />
-        <SkyDome horizon={PALETTE.skyHorizon} zenith={PALETTE.skyZenith} radius={140} />
-        <Clouds />
 
         <Lighting />
         {/* Photographic textures stream in; the scene appears once they're ready. */}
         <Suspense fallback={null}>
+          <SkyDome radius={140} />
           <Courtyard />
           <InnerHall />
           {PEDESTALS.map((p, i) => (

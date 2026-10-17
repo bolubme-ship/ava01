@@ -18,6 +18,12 @@ export const HERITAGE_TEXTURES = {
   limestoneNormal: "textures/heritage/limestone-normal.webp",
   rug: "textures/heritage/rug.webp",
   oliveBranch: "textures/heritage/olive-branch.webp",
+  bougainvillea: "textures/heritage/bougainvillea.webp",
+  agave: "textures/heritage/agave.webp",
+  carvedClay: "textures/heritage/carved-clay.webp",
+  carvedClayNormal: "textures/heritage/carved-clay-normal.webp",
+  kilim: "textures/heritage/kilim.webp",
+  sky: "textures/heritage/sky.webp",
 } as const;
 
 export type HeritageTextureName = keyof typeof HERITAGE_TEXTURES;

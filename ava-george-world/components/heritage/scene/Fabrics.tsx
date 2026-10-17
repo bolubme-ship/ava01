@@ -5,7 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { DoubleSide, PlaneGeometry, type Group } from "three";
 import type { Vec3 } from "../config";
 import { useAmbientMotion } from "./motion";
-import { useProceduralTexture } from "./proceduralTextures";
+import { useHeritageTexture } from "./assets";
 
 /*
  * Soft furnishings: canopy sails strung across the courtyard and kilim
@@ -81,7 +81,7 @@ interface KilimProps {
 export function Kilim({ position, rotationY = 0, width = 1.1, height = 2.4, phase = 0 }: KilimProps) {
   const animate = useAmbientMotion();
   const cloth = useRef<Group>(null);
-  const texture = useProceduralTexture("kilim");
+  const texture = useHeritageTexture("kilim");
 
   useFrame(({ clock }) => {
     if (cloth.current && animate) cloth.current.rotation.x = Math.sin(clock.elapsedTime * 0.8 + phase) * 0.025 + 0.02;

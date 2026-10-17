@@ -261,8 +261,6 @@ export function facingRotation(pedestalIndex: number): number {
 /** Warm palette shared by the scene. */
 export const PALETTE = {
   haze: "#f1d9bd",
-  skyHorizon: "#e4eef6",
-  skyZenith: "#2b78d0",
   /*
    * Walls use a photographed terracotta plaster texture; these are tints
    * multiplied over it (white = the plaster's own colour).
@@ -270,7 +268,7 @@ export const PALETTE = {
   wallWarm: "#ecd3c3",
   wallLight: "#ffffff",
   wallTrim: "#eec594",
-  niche: "#b4653a",
+  niche: "#b98d78",
   canopyTerracotta: "#c8733f",
   canopyCream: "#f3e2c4",
   canopyRed: "#c8442f",

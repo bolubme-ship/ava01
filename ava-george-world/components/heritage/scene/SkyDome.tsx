@@ -1,35 +1,36 @@
 "use client";
 
-import { useMemo } from "react";
-import { BackSide, BufferAttribute, Color, SphereGeometry } from "three";
+import { useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { BackSide, type Mesh } from "three";
+import { useHeritageTexture } from "./assets";
+import { useAmbientMotion } from "./motion";
 
 interface SkyDomeProps {
-  horizon: string;
-  zenith: string;
   radius?: number;
 }
 
-/** Inexpensive vertical-gradient sky: warm haze at the horizon, paler overhead. */
-export function SkyDome({ horizon, zenith, radius = 90 }: SkyDomeProps) {
-  const geometry = useMemo(() => {
-    const geo = new SphereGeometry(radius, 32, 16);
-    const low = new Color(horizon);
-    const high = new Color(zenith);
-    const pos = geo.attributes.position;
-    const colors = new Float32Array(pos.count * 3);
-    const c = new Color();
-    for (let i = 0; i < pos.count; i++) {
-      const t = Math.min(Math.max(pos.getY(i) / radius, 0), 1);
-      c.copy(low).lerp(high, Math.pow(t, 0.45));
-      c.toArray(colors, i * 3);
-    }
-    geo.setAttribute("color", new BufferAttribute(colors, 3));
-    return geo;
-  }, [horizon, zenith, radius]);
+/**
+ * Photographed golden-hour sky (blue overhead, warm haze at the horizon,
+ * sunlit clouds) wrapped around an upper hemisphere. The image is stored
+ * side by side with its mirror image, so it wraps all the way round
+ * without a seam. The dome
+ * turns very slowly, so the clouds drift.
+ */
+export function SkyDome({ radius = 140 }: SkyDomeProps) {
+  const sky = useHeritageTexture("sky");
+  const dome = useRef<Mesh>(null);
+  const animate = useAmbientMotion();
+
+  useFrame((_, delta) => {
+    if (dome.current && animate) dome.current.rotation.y += delta * 0.004;
+  });
 
   return (
-    <mesh geometry={geometry} renderOrder={-1}>
-      <meshBasicMaterial vertexColors side={BackSide} fog={false} depthWrite={false} toneMapped={false} />
+    // Hemisphere dipped a few degrees below the horizon so no gap shows.
+    <mesh ref={dome} renderOrder={-1} position={[0, -radius * 0.06, 0]}>
+      <sphereGeometry args={[radius, 64, 24, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      <meshBasicMaterial map={sky} side={BackSide} fog={false} depthWrite={false} toneMapped={false} />
     </mesh>
   );
 }

@@ -412,6 +412,8 @@ function BlindNiches() {
     };
   }, []);
   const face = HALF_X - WALL_DEPTH / 2;
+  // The recess is the same plaster, deeper in tone as if in shade.
+  const nichePlaster = useHeritageTexture("plaster", 0.6, 1.2);
 
   return (
     <group>
@@ -419,7 +421,7 @@ function BlindNiches() {
         NICHE_Z.map((z) => (
           <group key={`${side}${z}`} position={[-side * face, 0, z]} rotation-y={(side * Math.PI) / 2}>
             <mesh geometry={recess} position={[0, 0, 0.006]} receiveShadow>
-              <meshStandardMaterial color={PALETTE.niche} roughness={0.95} />
+              <meshStandardMaterial color={PALETTE.niche} map={nichePlaster} roughness={0.95} />
             </mesh>
             <mesh geometry={band} castShadow receiveShadow>
               <meshStandardMaterial color={PALETTE.wallTrim} roughness={0.9} />

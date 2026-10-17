@@ -12,14 +12,12 @@ import {
   Object3D,
   Shape,
   ShapeGeometry,
-  SphereGeometry,
   Vector2,
   Vector3,
   type BufferGeometry,
 } from "three";
 import type { Vec3 } from "../config";
 import { useHeritageTexture } from "./assets";
-import { useProceduralTexture } from "./proceduralTextures";
 import { mulberry32 } from "./random";
 import { useWindMaterial } from "./wind";
 
@@ -49,7 +47,7 @@ function useInstances(ref: React.RefObject<InstancedMesh | null>, blobs: Blob[])
     const color = new Color();
     blobs.forEach((b, i) => {
       dummy.position.copy(b.position);
-      dummy.rotation.set(b.rotation.x, b.rotation.y, b.rotation.z);
+      dummy.rotation.set(b.rotation.x, b.rotation.y, b.rotation.z, "YXZ");
       dummy.scale.copy(b.scale);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
@@ -72,6 +70,13 @@ const leafGeometry = (() => {
   shape.quadraticCurveTo(-0.5, -0.1, 0, -1);
   return new ShapeGeometry(shape, 3);
 })();
+
+/** Unit card for photographed foliage cut-outs (centred). */
+const cardGeometry = new PlaneGeometry(1, 1);
+/** Card pivoting at its top edge, for sprays that hang from a stem. */
+const hangingCardGeometry = new PlaneGeometry(1, 1).translate(0, -0.5, 0);
+/** Card standing on its bottom edge, for plants rising from a pot. */
+const standingCardGeometry = new PlaneGeometry(1, 1).translate(0, 0.5, 0);
 
 /** Rounded bract / petal (6 triangles) for bougainvillea and flowers. */
 const bractGeometry = new CircleGeometry(1, 6);
@@ -119,8 +124,9 @@ interface BougainvilleaProps {
 }
 
 /**
- * Climbing bougainvillea: dense leaves along a path on a wall face, heavy
- * with magenta bracts, plus loose strands that hang and sway.
+ * Climbing bougainvillea: photographed flower sprays (alpha cut-out cards)
+ * hang along a path on a wall face over a backing of small leaves, with
+ * longer sprays dropping below. Everything sways in the breeze.
  */
 export function Bougainvillea({
   path,
@@ -130,9 +136,24 @@ export function Bougainvillea({
   strands = 6,
   seed = 1,
 }: BougainvilleaProps) {
-  const { leaves, blossoms } = useMemo(() => {
+  const spray = useHeritageTexture("bougainvillea");
+  const cardsRef = useRef<InstancedMesh>(null);
+  const cardMaterial = useWindMaterial({ map: spray, alphaTest: 0.5, side: DoubleSide, roughness: 0.75 }, 0.02);
+
+  const { leaves, blossoms, cards } = useMemo(() => {
     const rand = mulberry32(seed);
     const n = new Vector3(...normal).normalize();
+    const facing = Math.atan2(n.x, n.z);
+    const cards: Blob[] = [];
+    const addCard = (p: Vector3, size: number) => {
+      const s = size * (0.8 + rand() * 0.45);
+      cards.push({
+        position: p.clone().addScaledVector(n, 0.05 + rand() * spread * 0.45),
+        scale: new Vector3(s, s, 1),
+        rotation: new Vector3(-0.1 + rand() * 0.35, facing + (rand() - 0.5) * 0.9, (rand() - 0.5) * 0.7),
+        color: "#ffffff",
+      });
+    };
     const leaves: Blob[] = [];
     const blossoms: Blob[] = [];
     const add = (p: Vector3, bulge: number, pinkBias: number) => {
@@ -157,11 +178,19 @@ export function Bougainvillea({
       const count = Math.ceil(a.distanceTo(b) * density);
       for (let k = 0; k < count; k++) {
         segPoint.lerpVectors(a, b, rand());
-        for (let j = 0; j < 9; j++) {
+        for (let j = 0; j < 4; j++) {
           const offset = new Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).multiplyScalar(spread * 2);
           offset.addScaledVector(n, -offset.dot(n)); // flatten onto the wall plane
-          add(segPoint.clone().add(offset), 0.05 + rand() * spread * 0.6, 0.48);
+          add(segPoint.clone().add(offset), 0.02 + rand() * spread * 0.3, 0.12);
         }
+      }
+      // Flower sprays every ~20 cm, in two loose layers.
+      const sprays = Math.ceil(a.distanceTo(b) / 0.2);
+      for (let k = 0; k < sprays; k++) {
+        segPoint.lerpVectors(a, b, (k + rand()) / sprays);
+        const offset = new Vector3(rand() - 0.5, rand() - 0.3, rand() - 0.5).multiplyScalar(spread * 1.4);
+        offset.addScaledVector(n, -offset.dot(n));
+        addCard(segPoint.clone().add(offset), 0.62);
       }
     }
 
@@ -171,18 +200,20 @@ export function Bougainvillea({
       const start = new Vector3().lerpVectors(pts[i], pts[i + 1], rand());
       const length = 0.6 + rand() * 1.3;
       const drift = (rand() - 0.5) * 0.4;
-      for (let t = 0; t < length; t += 0.03) {
-        const p = start.clone().add(new Vector3(drift * t + (rand() - 0.5) * 0.12, -t, (rand() - 0.5) * 0.08));
-        add(p, 0.12 + rand() * 0.12, 0.62);
+      for (let t = 0; t < length; t += 0.45) {
+        const p = start.clone().add(new Vector3(drift * t, -t, 0));
+        addCard(p, 0.7);
       }
     }
-    return { leaves, blossoms };
+    return { leaves, blossoms, cards };
   }, [path, normal, spread, density, strands, seed]);
+  useInstances(cardsRef, cards);
 
   return (
     <group>
       <BlobCloud blobs={leaves} wind={0.012} />
       <BlobCloud blobs={blossoms} wind={0.02} geometry={bractGeometry} />
+      <instancedMesh ref={cardsRef} args={[hangingCardGeometry, cardMaterial, cards.length]} castShadow receiveShadow />
     </group>
   );
 }
@@ -233,13 +264,14 @@ function potGeometry(shape: PotShape) {
 export const POT_RIM: Record<PotShape, number> = { urn: 0.92, planter: 0.66 };
 
 export function CarvedPot({ position, scale = 1, shape = "urn" }: { position: Vec3; scale?: number; shape?: PotShape }) {
-  const texture = useProceduralTexture("carvedClay", 3, 1);
+  const texture = useHeritageTexture("carvedClay", 3, 1);
+  const normalMap = useHeritageTexture("carvedClayNormal", 3, 1);
   const rim = POT_RIM[shape];
   const soilRadius = shape === "urn" ? 0.3 : 0.44;
   return (
     <group position={position} scale={scale}>
       <mesh geometry={potGeometry(shape)} castShadow receiveShadow>
-        <meshStandardMaterial color="#ffffff" map={texture} bumpMap={texture} bumpScale={1.5} roughness={0.85} />
+        <meshStandardMaterial map={texture} normalMap={normalMap} normalScale={[1.2, 1.2]} roughness={0.88} />
       </mesh>
       <mesh position={[0, rim - 0.04, 0]} rotation-x={-Math.PI / 2}>
         <circleGeometry args={[soilRadius, 24]} />
@@ -250,55 +282,30 @@ export function CarvedPot({ position, scale = 1, shape = "urn" }: { position: Ve
 }
 
 // ---------------------------------------------------------------------------
-// Leafy potted plant
+// Potted agave
 
-const bladeGeometry = (() => {
-  const g = new SphereGeometry(1, 8, 6);
-  g.translate(0, 1, 0);
-  return g;
-})();
-
-/** Arching, fern-like leaves in a carved pot. */
+/**
+ * A photographed agave in a carved pot, shown on three crossed cards so it
+ * reads as a full plant from any angle the camera passes.
+ */
 export function PottedPlant({ position, scale = 1, seed = 3 }: { position: Vec3; scale?: number; seed?: number }) {
-  const ref = useRef<InstancedMesh>(null);
-  const material = useWindMaterial({ roughness: 0.7 }, 0.01);
-  const blades = useMemo(() => {
-    const rand = mulberry32(seed);
-    const out: Blob[] = [];
-    for (let i = 0; i < 26; i++) {
-      out.push({
-        position: new Vector3(0, POT_RIM.urn - 0.05, 0),
-        scale: new Vector3(0.07 + rand() * 0.03, 0.28 + rand() * 0.18, 0.014),
-        rotation: new Vector3(0.35 + rand() * 0.9, rand() * 6.28, 0),
-        color: LEAF_COLORS[Math.floor(rand() * LEAF_COLORS.length)],
-      });
-    }
-    return out;
-  }, [seed]);
-
-  useLayoutEffect(() => {
-    const mesh = ref.current;
-    if (!mesh) return;
-    const color = new Color();
-    blades.forEach((b, i) => {
-      // Spin around the stem first, then tilt outwards.
-      dummy.position.copy(b.position);
-      dummy.rotation.set(0, b.rotation.y, 0);
-      dummy.rotateX(b.rotation.x);
-      dummy.scale.copy(b.scale);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-      mesh.setColorAt(i, color.set(b.color));
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    mesh.computeBoundingSphere();
-  }, [blades]);
-
+  const agave = useHeritageTexture("agave");
+  const turn = useMemo(() => mulberry32(seed)() * Math.PI, [seed]);
   return (
     <group position={position} scale={scale}>
       <CarvedPot position={[0, 0, 0]} />
-      <instancedMesh ref={ref} args={[bladeGeometry, material, blades.length]} castShadow />
+      {[0, 1, 2].map((k) => (
+        <mesh
+          key={k}
+          geometry={standingCardGeometry}
+          position={[0, POT_RIM.urn - 0.12, 0]}
+          rotation-y={turn + (k * Math.PI) / 3}
+          scale={[0.95, 0.8, 1]}
+          castShadow
+        >
+          <meshStandardMaterial map={agave} alphaTest={0.5} side={DoubleSide} roughness={0.6} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -355,44 +362,54 @@ export function CitrusTree({ position, scale = 1, seed = 5 }: { position: Vec3; 
   );
 }
 
-/** Low flowering shrub (pink and red) in a carved pot. */
+/** A potted bougainvillea bush: photographed sprays arching out over a leafy dome. */
 export function FloweringShrub({ position, scale = 1, seed = 9 }: { position: Vec3; scale?: number; seed?: number }) {
-  const { leaves, blossoms } = useMemo(() => {
+  const spray = useHeritageTexture("bougainvillea");
+  const cardsRef = useRef<InstancedMesh>(null);
+  const cardMaterial = useWindMaterial({ map: spray, alphaTest: 0.5, side: DoubleSide, roughness: 0.75 }, 0.012);
+
+  const { leaves, cards } = useMemo(() => {
     const rand = mulberry32(seed);
     const leaves: Blob[] = [];
-    const blossoms: Blob[] = [];
-    const center = new Vector3(0, POT_RIM.urn + 0.28, 0);
-    for (let i = 0; i < 420; i++) {
-      const dir = new Vector3(rand() * 2 - 1, rand() * 1.2 - 0.3, rand() * 2 - 1).normalize();
-      const p = center.clone().addScaledVector(dir, 0.5 * (0.6 + rand() * 0.45));
-      const isBlossom = dir.y > -0.1 && rand() < 0.42;
-      const s = isBlossom ? 0.045 + rand() * 0.03 : 0.045 + rand() * 0.03;
-      (isBlossom ? blossoms : leaves).push({
-        position: p,
-        scale: isBlossom ? bractScale(s, rand) : leafScale(s, rand),
+    const center = new Vector3(0, POT_RIM.urn + 0.22, 0);
+    for (let i = 0; i < 220; i++) {
+      const dir = new Vector3(rand() * 2 - 1, rand() * 1.1 - 0.2, rand() * 2 - 1).normalize();
+      const s = 0.045 + rand() * 0.03;
+      leaves.push({
+        position: center.clone().addScaledVector(dir, 0.38 * (0.6 + rand() * 0.4)),
+        scale: leafScale(s, rand),
         rotation: new Vector3(rand() * 6.28, rand() * 6.28, rand() * 6.28),
-        color: isBlossom
-          ? BLOSSOM_COLORS[Math.floor(rand() * BLOSSOM_COLORS.length)]
-          : LEAF_COLORS[Math.floor(rand() * LEAF_COLORS.length)],
+        color: LEAF_COLORS[Math.floor(rand() * LEAF_COLORS.length)],
       });
     }
-    return { leaves, blossoms };
+    // Sprays hang from the crown and lean outwards all the way round.
+    const cards: Blob[] = [];
+    const count = 14;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 + rand() * 0.4;
+      const s = 0.5 + rand() * 0.25;
+      cards.push({
+        position: center.clone().add(new Vector3(Math.sin(a) * 0.12, 0.28 + rand() * 0.12, Math.cos(a) * 0.12)),
+        scale: new Vector3(s, s, 1),
+        rotation: new Vector3(-0.45 - rand() * 0.45, a, (rand() - 0.5) * 0.5),
+        color: "#ffffff",
+      });
+    }
+    return { leaves, cards };
   }, [seed]);
+  useInstances(cardsRef, cards);
 
   return (
     <group position={position} scale={scale}>
       <CarvedPot position={[0, 0, 0]} />
       <BlobCloud blobs={leaves} wind={0.008} />
-      <BlobCloud blobs={blossoms} wind={0.014} geometry={bractGeometry} />
+      <instancedMesh ref={cardsRef} args={[hangingCardGeometry, cardMaterial, cards.length]} castShadow receiveShadow />
     </group>
   );
 }
 
 // ---------------------------------------------------------------------------
 // Olive tree
-
-/** Unit card for photographed foliage cut-outs. */
-const cardGeometry = new PlaneGeometry(1, 1);
 
 /**
  * Multi-stemmed olive in a planter. The crown is built from cards of a
