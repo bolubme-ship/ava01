@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Billboard, Html } from "@react-three/drei";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
-import { DoubleSide, LatheGeometry, MathUtils, Vector2, type BufferGeometry, type Group } from "three";
+import {
+  AdditiveBlending,
+  DoubleSide,
+  LatheGeometry,
+  MathUtils,
+  Vector2,
+  type BufferGeometry,
+  type MeshBasicMaterial,
+  type MeshStandardMaterial,
+} from "three";
 import type { Silhouette, Vec3 } from "../config";
 import { useHeritageTexture, type HeritageTextureName } from "./assets";
 import { useFabricTexture, useProceduralTexture } from "./proceduralTextures";
@@ -18,7 +27,7 @@ interface DisplayPedestalProps {
   accent: string;
   /** Cut-out photo of the real garment; replaces the placeholder outfit when set. */
   image?: HeritageTextureName;
-  /** Gentle idle sway of the garment; off for reduced motion. */
+  /** Fade the hover glow in and out; off (instant) for reduced motion. */
   animate?: boolean;
   /** Short name shown on hover, e.g. "Look 03". */
   label: string;
@@ -37,8 +46,9 @@ const BRASS = "#c39a52";
  * puff sleeves, collar, embroidered bands) as a stand-in until each look's
  * real 3D model is supplied; the plinth, stand and interaction stay the same.
  *
- * Interactive: on hover the garment lifts, turns to face the viewer and a
- * label appears; clicking selects the look (the page scrolls to its stop).
+ * Interactive: the garment itself stays still; on hover the plinth lights up
+ * (its brass ring glows and a warm pool of light spreads over the top) and a
+ * label appears. Clicking selects the look (the page scrolls to its stop).
  */
 export function DisplayPedestal({
   position,
@@ -52,9 +62,10 @@ export function DisplayPedestal({
   onSelect,
   labelLayer,
 }: DisplayPedestalProps) {
-  const garment = useRef<Group>(null);
-  const phase = useMemo(() => position[0] * 1.7 + position[2], [position]);
   const [hovered, setHovered] = useState(false);
+  const ring = useRef<MeshStandardMaterial>(null);
+  const pool = useRef<MeshBasicMaterial>(null);
+  const glow = useRef(0);
 
   useEffect(() => {
     if (!hovered) return;
@@ -64,14 +75,12 @@ export function DisplayPedestal({
     };
   }, [hovered]);
 
-  useFrame(({ clock }, delta) => {
-    const g = garment.current;
-    if (!g) return;
-    const sway = animate && !hovered ? Math.sin(clock.elapsedTime * 0.35 + phase) * 0.12 : 0;
-    const k = animate ? 1 - Math.exp(-delta * 8) : 1;
-    g.rotation.y = MathUtils.lerp(g.rotation.y, sway, k);
-    g.position.y = MathUtils.lerp(g.position.y, PLINTH_TOP + (hovered ? 0.08 : 0), k);
-    g.scale.setScalar(MathUtils.lerp(g.scale.x, hovered ? 1.04 : 1, k));
+  // Fade the plinth's glow in and out (instantly with reduced motion).
+  useFrame((_, delta) => {
+    const k = animate ? 1 - Math.exp(-delta * 6) : 1;
+    glow.current = MathUtils.lerp(glow.current, hovered ? 1 : 0, k);
+    if (ring.current) ring.current.emissiveIntensity = glow.current * 3;
+    if (pool.current) pool.current.opacity = glow.current * 0.8;
   });
 
   const over = (e: ThreeEvent<PointerEvent>) => {
@@ -86,8 +95,8 @@ export function DisplayPedestal({
 
   return (
     <group position={position} rotation-y={rotationY} onPointerOver={over} onPointerOut={out} onClick={click}>
-      <Plinth />
-      <group ref={garment} position={[0, PLINTH_TOP, 0]}>
+      <Plinth ringMaterial={ring} poolMaterial={pool} />
+      <group position={[0, PLINTH_TOP, 0]}>
         {image ? (
           <PhotoGarment image={image} />
         ) : (
@@ -113,10 +122,20 @@ export function DisplayPedestal({
   );
 }
 
-/** Stepped plinth in honed cream marble with a brass inlay ring at the top. */
-function Plinth() {
+/**
+ * Stepped plinth in honed cream marble with a brass inlay ring at the top.
+ * The ring's glow and the pool of light on top are driven on hover.
+ */
+function Plinth({
+  ringMaterial,
+  poolMaterial,
+}: {
+  ringMaterial: RefObject<MeshStandardMaterial | null>;
+  poolMaterial: RefObject<MeshBasicMaterial | null>;
+}) {
   const marble = useProceduralTexture("marble", 2, 1);
   const marbleTop = useProceduralTexture("marble", 1, 1);
+  const glow = useProceduralTexture("glowSpot");
   return (
     <group>
       <mesh position={[0, 0.05, 0]} castShadow receiveShadow>
@@ -133,7 +152,27 @@ function Plinth() {
       </mesh>
       <mesh position={[0, PLINTH_TOP - 0.035, 0]} rotation-x={Math.PI / 2}>
         <torusGeometry args={[0.722, 0.012, 8, 96]} />
-        <meshStandardMaterial color={BRASS} metalness={0.85} roughness={0.3} />
+        <meshStandardMaterial
+          ref={ringMaterial}
+          color={BRASS}
+          metalness={0.85}
+          roughness={0.3}
+          emissive="#ffc46b"
+          emissiveIntensity={0}
+        />
+      </mesh>
+      <mesh position={[0, PLINTH_TOP + 0.004, 0]} rotation-x={-Math.PI / 2}>
+        <planeGeometry args={[1.6, 1.6]} />
+        <meshBasicMaterial
+          ref={poolMaterial}
+          map={glow}
+          color="#ffcf8f"
+          transparent
+          opacity={0}
+          blending={AdditiveBlending}
+          depthWrite={false}
+          toneMapped={false}
+        />
       </mesh>
     </group>
   );
