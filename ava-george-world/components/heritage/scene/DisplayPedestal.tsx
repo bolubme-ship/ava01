@@ -29,8 +29,6 @@ interface DisplayPedestalProps {
   image?: HeritageTextureName;
   /** Fade the hover glow in and out; off (instant) for reduced motion. */
   animate?: boolean;
-  /** Short name shown on hover, e.g. "Look 03". */
-  label: string;
   /** Called when the visitor clicks or taps the display. */
   onSelect?: () => void;
   /** Fixed, screen-sized layer the hover label is rendered into. */
@@ -48,7 +46,7 @@ const BRASS = "#c39a52";
  *
  * Interactive: the garment itself stays still; on hover the plinth lights up
  * (its brass ring glows and a warm pool of light spreads over the top) and a
- * label appears. Clicking selects the look (the page scrolls to its stop).
+ * "Shop" label appears. Clicking selects the look (the page scrolls to its stop).
  */
 export function DisplayPedestal({
   position,
@@ -58,7 +56,6 @@ export function DisplayPedestal({
   accent,
   image,
   animate = true,
-  label,
   onSelect,
   labelLayer,
 }: DisplayPedestalProps) {
@@ -114,7 +111,7 @@ export function DisplayPedestal({
           style={{ pointerEvents: "none" }}
         >
           <div className="whitespace-nowrap rounded-full bg-[#2a170c]/80 px-4 py-2 text-center text-[11px] tracking-[0.22em] text-[#fbf1e1] uppercase shadow-lg backdrop-blur-sm">
-            {label} · View look
+            Shop
           </div>
         </Html>
       )}

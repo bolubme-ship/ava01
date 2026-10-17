@@ -78,7 +78,6 @@ export default function HeritageCanvas({
               accent={p.accent}
               image={p.image}
               animate={!reducedMotion}
-              label={`Look ${String(i + 1).padStart(2, "0")}`}
               onSelect={() => onSelectLook(i)}
               labelLayer={labelLayer}
             />
