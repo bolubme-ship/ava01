@@ -56,23 +56,20 @@ export function Hero({ chapter, active, onExplore }: HeroProps) {
             onClick={onExplore}
             tabIndex={active ? 0 : -1}
             aria-label="Scroll to explore the courtyard"
-            className={`group inline-flex items-center gap-3 rounded-full bg-[#a9472b] py-1.5 pr-1.5 pl-6 text-sm font-medium tracking-[0.2em] text-white uppercase shadow-[0_10px_30px_-10px_rgba(80,25,10,0.7)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#93391f] focus-visible:ring-2 focus-visible:ring-[#fffaf2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#a9472b] focus-visible:outline-none active:translate-y-0 ${
+            className={`flex h-14 w-14 items-center justify-center rounded-full border border-[#fffaf2]/70 bg-transparent text-[#fffaf2] transition duration-300 hover:-translate-y-0.5 hover:border-[#fffaf2] hover:bg-[#fffaf2]/10 focus-visible:ring-2 focus-visible:ring-[#fffaf2] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:outline-none active:translate-y-0 ${
               active ? "pointer-events-auto" : "pointer-events-none"
             }`}
           >
-            Scroll
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#fffaf2] text-[#a9472b]">
-              <svg
-                viewBox="0 0 12 16"
-                className="h-4 w-3 motion-safe:animate-bounce"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.6}
-                aria-hidden="true"
-              >
-                <path d="M6 1v13M1.5 9.5 6 14l4.5-4.5" />
-              </svg>
-            </span>
+            <svg
+              viewBox="0 0 12 16"
+              className="h-5 w-4 drop-shadow motion-safe:animate-bounce"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.6}
+              aria-hidden="true"
+            >
+              <path d="M6 1v13M1.5 9.5 6 14l4.5-4.5" />
+            </svg>
           </button>
         </div>
       </div>
