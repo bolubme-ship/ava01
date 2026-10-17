@@ -71,7 +71,7 @@ export function HeritageExperience() {
       <div ref={trackRef} className="relative">
         {CHAPTERS.map((chapter, i) => (
           <section
-            key={chapter.eyebrow}
+            key={i}
             id={`stop-${i}`}
             style={{ height: i === CHAPTERS.length - 1 ? "100svh" : `${SCROLL_PER_STOP * 100}svh` }}
           >
@@ -89,14 +89,20 @@ export function HeritageExperience() {
                   aria-hidden="true"
                 />
                 <div className="relative max-w-md text-[#fffaf2]">
-                  <p className="text-xs font-medium tracking-[0.34em] uppercase drop-shadow">{chapter.eyebrow}</p>
-                  <span className="mt-4 block h-px w-10 bg-[#fffaf2]/80" aria-hidden="true" />
-                  <h2 className="mt-4 font-display text-[clamp(2.6rem,5vw,4.25rem)] leading-[0.95] font-medium drop-shadow-[0_2px_12px_rgba(42,23,12,0.4)]">
+                  {chapter.eyebrow && (
+                    <>
+                      <p className="text-xs font-medium tracking-[0.34em] uppercase drop-shadow">{chapter.eyebrow}</p>
+                      <span className="mt-4 mb-4 block h-px w-10 bg-[#fffaf2]/80" aria-hidden="true" />
+                    </>
+                  )}
+                  <h2 className="font-display text-[clamp(2.6rem,5vw,4.25rem)] leading-[0.95] font-medium drop-shadow-[0_2px_12px_rgba(42,23,12,0.4)]">
                     {chapter.title}
                   </h2>
-                  <p className="mt-4 max-w-sm text-sm leading-relaxed text-[#fffaf2]/90 drop-shadow sm:text-base">
-                    {chapter.body}
-                  </p>
+                  {chapter.body && (
+                    <p className="mt-4 max-w-sm text-sm leading-relaxed text-[#fffaf2]/90 drop-shadow sm:text-base">
+                      {chapter.body}
+                    </p>
+                  )}
                 </div>
               </div>
             )}

@@ -33,6 +33,8 @@ export interface PedestalConfig {
    * it is shown on the stand in place of the placeholder outfit.
    */
   image?: HeritageTextureName;
+  /** The garment's name, shown as the look's only copy. */
+  name?: string;
 }
 
 export interface CameraStation {
@@ -198,11 +200,12 @@ const THRESHOLD_STATION: CameraStation = {
 const NUMBER_WORDS = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
 const titleCase = (word: string) => word[0].toUpperCase() + word.slice(1);
 
+/** A look's copy is just the garment's name (a placeholder until it is named). */
 function lookChapter(p: PedestalConfig, i: number): Chapter {
   return {
-    eyebrow: `Look ${String(i + 1).padStart(2, "0")}`,
-    title: `Display ${titleCase(NUMBER_WORDS[i])}`,
-    body: `Placeholder ${p.silhouette}. Heritage outfit ${NUMBER_WORDS[i]} will stand here.`,
+    eyebrow: "",
+    title: p.name ?? `Display ${titleCase(NUMBER_WORDS[i])}`,
+    body: "",
   };
 }
 
