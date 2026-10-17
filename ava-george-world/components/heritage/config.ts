@@ -233,8 +233,9 @@ const STOPS: Stop[] = [
       portrait: { position: [0, 1.5, COURTYARD.halfZ + 12.5], target: [0, 4.4, COURTYARD.halfZ - 6], lens: 1.38 },
     },
     chapter: {
-      eyebrow: "Ava & George World",
-      title: "The Heritage Collection",
+      eyebrow: "",
+      // The non-breaking space keeps "Ava &" on one line when the hero stacks its words.
+      title: "Ava\u00a0& George World",
       body: "",
     },
   },

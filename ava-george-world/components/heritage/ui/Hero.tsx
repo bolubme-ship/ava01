@@ -26,20 +26,26 @@ export function Hero({ chapter, active, onExplore }: HeroProps) {
         aria-hidden="true"
       />
       <div className="relative max-w-xl text-[#fffaf2]">
-        <p
-          className={`text-xs font-medium tracking-[0.34em] uppercase drop-shadow sm:text-sm ${revealClass(active)}`}
-          style={revealDelay(active, 0)}
+        {chapter.eyebrow && (
+          <>
+            <p
+              className={`text-xs font-medium tracking-[0.34em] uppercase drop-shadow sm:text-sm ${revealClass(active)}`}
+              style={revealDelay(active, 0)}
+            >
+              {chapter.eyebrow}
+            </p>
+            <span
+              className={`mt-5 block h-px w-12 origin-left bg-[#fffaf2]/80 transition-[scale,opacity] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                active ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
+              }`}
+              style={revealDelay(active, 150)}
+              aria-hidden="true"
+            />
+          </>
+        )}
+        <h1
+          className={`${chapter.eyebrow ? "mt-6" : ""} font-display text-[clamp(3.1rem,7.2vw,6.6rem)] leading-[0.95] font-medium text-balance drop-shadow-[0_2px_12px_rgba(42,23,12,0.35)]`}
         >
-          {chapter.eyebrow}
-        </p>
-        <span
-          className={`mt-5 block h-px w-12 origin-left bg-[#fffaf2]/80 transition-[scale,opacity] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            active ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
-          }`}
-          style={revealDelay(active, 150)}
-          aria-hidden="true"
-        />
-        <h1 className="mt-6 font-display text-[clamp(3.1rem,7.2vw,6.6rem)] leading-[0.95] font-medium text-balance drop-shadow-[0_2px_12px_rgba(42,23,12,0.35)]">
           <MaskedWords text={chapter.title} active={active} delay={200} stagger={110} blockWords />
         </h1>
         {chapter.body && (
