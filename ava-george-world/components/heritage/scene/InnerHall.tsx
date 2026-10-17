@@ -2,24 +2,50 @@
 
 import { useMemo } from "react";
 import { Instance, Instances } from "@react-three/drei";
-import { AdditiveBlending, DoubleSide, ExtrudeGeometry, Path, Shape, ShapeGeometry } from "three";
-import { ALCOVE_ANGLES, ALCOVE_RADIUS, HALL, PALETTE, onHallRing, type Vec3 } from "../config";
+import {
+  AdditiveBlending,
+  DoubleSide,
+  ExtrudeGeometry,
+  Matrix4,
+  PlaneGeometry,
+  Shape,
+  ShapeGeometry,
+  Vector3,
+} from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { ALCOVE_ANGLES, HALL, PALETTE, onHallRing } from "../config";
+import { archBandShape } from "./ArchedWall";
 import { useHeritageTexture } from "./assets";
+import { OliveTree } from "./Planting";
+import { useProceduralTexture } from "./proceduralTextures";
+import { mulberry32 } from "./random";
 
 /*
- * The inner hall: a round, domed room behind the courtyard's back wall,
- * entered through its central archway. Four looks stand in arched alcoves
- * around the curved wall under hanging lanterns; the finale stands on a
- * stepped central dais beneath an open oculus, lit by a soft shaft of light.
- * Timber beams radiate from the oculus like the spokes of a wheel.
+ * The inner hall: a round room behind the courtyard's back wall, entered
+ * through its central archway. Terracotta walls are divided by cream stone
+ * pilasters; four looks stand before warmly lit arched niches, the finale
+ * on a stepped marble dais. Above, a timber dome of radiating boards and
+ * beams rises from a glowing cove to a glazed skylight, and soft shafts of
+ * sun fall through it onto an inlaid marble floor.
  */
 
 const R = HALL.radius;
 const H = HALL.height;
 const CZ = HALL.centerZ;
+const OCULUS = HALL.oculusRadius;
+/** How far the timber dome rises from the wall top to the skylight. */
+const RISE = 1.5;
+/** Length of the dome's slope, wall top to skylight. */
+const SLOPE = Math.hypot(R - OCULUS, RISE);
 const WALL_THICKNESS = 0.6;
 /** Half-angle of the gap in the curved wall where the entrance arch meets it. */
 const DOOR_GAP = Math.asin((HALL.doorHalfWidth + 0.15) / R);
+
+/** Angles (0 = entrance) of the stone pilasters, banners, lanterns and potted olives. */
+const PILASTER_ANGLES = [-162, -105, -40, 40, 105, 162];
+const BANNER_ANGLES = [-122, 122];
+const LANTERN_ANGLES = [-162, -105, 105, 162];
+const OLIVE_ANGLES = [-156, -88, -52, 52, 88, 156];
 
 const TEXTILE_BANDS = [
   PALETTE.indigoCloth,
@@ -31,10 +57,17 @@ const TEXTILE_BANDS = [
   PALETTE.indigoCloth,
 ];
 
+/** Height of the dome's underside above the floor at a given distance from the centre. */
+const ceilingHeightAt = (radius: number) => H + (RISE * (R - radius)) / (R - OCULUS);
+
+/** Yaw that turns an object at `degrees` on the ring to face the centre. */
+const facingCentre = (degrees: number) => ((degrees + 180) * Math.PI) / 180;
+
 function CurvedWall() {
   // Same photographed terracotta plaster as the courtyard, softened by a warm tint.
   const texture = useHeritageTexture("plaster", 22, 2.4);
   const normalMap = useHeritageTexture("plasterNormal", 22, 2.4);
+  const stone = useHeritageTexture("limestone", 24, 0.4);
   return (
     <group>
       <mesh position={[0, H / 2, CZ]} castShadow receiveShadow>
@@ -59,145 +92,288 @@ function CurvedWall() {
           <meshStandardMaterial color={PALETTE.hallWall} map={texture} roughness={0.95} />
         </mesh>
       ))}
+      {/* Cream stone skirting and cornice running round the room. */}
+      {(
+        [
+          [R - 0.04, 0.32, 0.16],
+          [R - 0.12, 0.44, H - 0.22],
+        ] as const
+      ).map(([radius, height, y]) => (
+        <mesh key={y} position={[0, y, CZ]} receiveShadow>
+          <cylinderGeometry args={[radius, radius, height, 96, 1, true, DOOR_GAP, Math.PI * 2 - DOOR_GAP * 2]} />
+          <meshStandardMaterial color={PALETTE.hallStone} map={stone} roughness={0.7} side={DoubleSide} />
+        </mesh>
+      ))}
     </group>
   );
 }
 
-function Ceiling() {
-  const geometry = useMemo(() => {
-    const ring = new Shape();
-    ring.absarc(0, 0, R + WALL_THICKNESS, 0, Math.PI * 2, false);
-    const oculus = new Path();
-    oculus.absarc(0, 0, HALL.oculusRadius, 0, Math.PI * 2, true);
-    ring.holes.push(oculus);
-    const geo = new ExtrudeGeometry(ring, { depth: 0.36, bevelEnabled: false, curveSegments: 64 });
-    geo.rotateX(-Math.PI / 2);
-    return geo;
-  }, []);
+/** Cream stone pilasters dividing the wall into bays, with simple capitals and bases. */
+function Pilasters() {
+  const stone = useHeritageTexture("limestone", 0.6, 2.5);
+  const parts = [
+    { size: [0.56, H - 0.44, 0.24], y: H / 2 - 0.22, inset: 0.12 },
+    { size: [0.78, 0.26, 0.36], y: H - 0.57, inset: 0.18 },
+    { size: [0.74, 0.34, 0.34], y: 0.17, inset: 0.17 },
+  ] as const;
+  return (
+    <group>
+      {parts.map(({ size, y, inset }) => (
+        <Instances key={y} castShadow receiveShadow limit={PILASTER_ANGLES.length}>
+          <boxGeometry args={size} />
+          <meshStandardMaterial color={PALETTE.hallStone} map={stone} roughness={0.65} />
+          {PILASTER_ANGLES.map((deg) => (
+            <Instance key={deg} position={onHallRing(R - inset, deg, y)} rotation-y={facingCentre(deg)} />
+          ))}
+        </Instances>
+      ))}
+    </group>
+  );
+}
 
-  const beamLength = R - HALL.oculusRadius;
-  const midRadius = HALL.oculusRadius + beamLength / 2;
-  const beamAngles = Array.from({ length: 16 }, (_, i) => i * 22.5 + 11.25);
+/**
+ * Timber dome: radiating boards on a shallow cone with heavy beams beneath,
+ * a glowing cove where it meets the wall, and a glazed skylight at the top.
+ */
+function Dome() {
+  const boards = useProceduralTexture("timberBoards", 14, 1);
+  const cove = useProceduralTexture("coveGlow");
+  const beamAngles = Array.from({ length: 32 }, (_, i) => i * 11.25 + 5.625);
+  const tilt = Math.atan2(RISE, R - OCULUS);
+  const midRadius = (R + OCULUS) / 2;
+  /** The glow washes 1.4 m up the dome's slope from the cove. */
+  const glowRun = 1.4;
+  const glowTop = R - 0.15 - (glowRun * (R - OCULUS)) / SLOPE;
 
   return (
     <group>
-      <mesh geometry={geometry} position={[0, H, CZ]} castShadow receiveShadow>
-        <meshStandardMaterial color={PALETTE.hallCeiling} roughness={0.9} />
+      <mesh position={[0, H + RISE / 2, CZ]} castShadow receiveShadow>
+        <cylinderGeometry args={[OCULUS, R + 0.05, RISE, 96, 1, true]} />
+        <meshStandardMaterial map={boards} roughness={0.75} side={DoubleSide} />
       </mesh>
-      <Instances castShadow receiveShadow limit={16}>
-        <boxGeometry args={[0.2, 0.26, beamLength]} />
-        <meshStandardMaterial color={PALETTE.timber} roughness={0.85} />
+      <Instances castShadow receiveShadow limit={beamAngles.length}>
+        <boxGeometry args={[0.16, 0.22, SLOPE]} />
+        <meshStandardMaterial color={PALETTE.timber} roughness={0.8} />
         {beamAngles.map((deg) => (
-          <Instance key={deg} position={onHallRing(midRadius, deg, H - 0.13)} rotation-y={(deg * Math.PI) / 180} />
+          <Instance
+            key={deg}
+            position={onHallRing(midRadius, deg, H + RISE / 2 - 0.13)}
+            rotation={[tilt, (deg * Math.PI) / 180, 0]}
+            rotation-order="YXZ"
+          />
         ))}
       </Instances>
+
+      {/* Cove: a warm line of light along the cornice, washing up the boards. */}
+      <mesh position={[0, H - 0.01, CZ]} rotation-x={Math.PI / 2}>
+        <torusGeometry args={[R - 0.22, 0.035, 8, 128]} />
+        <meshBasicMaterial color={PALETTE.lanternGlow} toneMapped={false} />
+      </mesh>
+      <mesh position={[0, H + (RISE * (R - 0.15 - glowTop)) / (R - OCULUS) / 2 - 0.04, CZ]}>
+        <cylinderGeometry
+          args={[glowTop, R - 0.15, (RISE * (R - 0.15 - glowTop)) / (R - OCULUS), 96, 1, true]}
+        />
+        <meshBasicMaterial
+          map={cove}
+          transparent
+          opacity={0.75}
+          blending={AdditiveBlending}
+          depthWrite={false}
+          side={DoubleSide}
+          toneMapped={false}
+          fog={false}
+        />
+      </mesh>
+
+      {/* Glazed skylight: bright glass, iron glazing bars, a brass rim. */}
+      <mesh position={[0, H + RISE + 0.06, CZ]} rotation-x={Math.PI / 2}>
+        <circleGeometry args={[OCULUS, 48]} />
+        <meshBasicMaterial color="#fbf4e6" toneMapped={false} side={DoubleSide} />
+      </mesh>
+      <Instances limit={4}>
+        <boxGeometry args={[OCULUS * 2, 0.07, 0.07]} />
+        <meshStandardMaterial color={PALETTE.iron} roughness={0.5} />
+        {[0, 45, 90, 135].map((deg) => (
+          <Instance key={deg} position={[0, H + RISE + 0.02, CZ]} rotation-y={(deg * Math.PI) / 180} />
+        ))}
+      </Instances>
+      <mesh position={[0, H + RISE + 0.02, CZ]} rotation-x={Math.PI / 2}>
+        <torusGeometry args={[OCULUS * 0.55, 0.035, 8, 48]} />
+        <meshStandardMaterial color={PALETTE.iron} roughness={0.5} />
+      </mesh>
+      <mesh position={[0, H + RISE, CZ]} rotation-x={Math.PI / 2}>
+        <torusGeometry args={[OCULUS, 0.1, 12, 64]} />
+        <meshStandardMaterial color={PALETTE.brass} metalness={0.7} roughness={0.4} />
+      </mesh>
       {/*
         Invisible disc that only casts shadow: it stops raw sun through the
-        oculus from striping the wall, leaving the soft light shaft as the
-        oculus's only light.
+        skylight from striping the wall, leaving the soft shafts as its light.
       */}
-      <mesh position={[0, H + 0.4, CZ]} rotation-x={-Math.PI / 2} castShadow>
-        <circleGeometry args={[HALL.oculusRadius + 0.1, 48]} />
+      <mesh position={[0, H + RISE + 0.4, CZ]} rotation-x={-Math.PI / 2} castShadow>
+        <circleGeometry args={[OCULUS + 0.1, 48]} />
         <meshBasicMaterial colorWrite={false} depthWrite={false} side={DoubleSide} />
-      </mesh>
-      <mesh position={[0, H - 0.02, CZ]} rotation-x={Math.PI / 2}>
-        <torusGeometry args={[HALL.oculusRadius, 0.08, 12, 64]} />
-        <meshStandardMaterial color={PALETTE.brass} metalness={0.7} roughness={0.4} />
       </mesh>
     </group>
   );
 }
 
+/** Polished cream marble with the compass inlay, and the stepped marble dais. */
 function Floor() {
-  // Limestone flags, warmed by the lantern light.
-  const texture = useHeritageTexture("limestone", 4.5, 4.5);
-  const normalMap = useHeritageTexture("limestoneNormal", 4.5, 4.5);
+  const inlay = useProceduralTexture("hallFloor");
+  const marble = useProceduralTexture("marble", 2, 0.4);
   return (
     <group>
       <mesh position={[0, 0.006, CZ]} rotation-x={-Math.PI / 2} receiveShadow>
         <circleGeometry args={[R, 96]} />
-        <meshStandardMaterial color={PALETTE.hallFloor} map={texture} normalMap={normalMap} roughness={0.55} />
+        <meshStandardMaterial map={inlay} roughness={0.32} />
       </mesh>
       {(
         [
-          [3.3, 3.5, PALETTE.indigoCloth],
-          [5.55, 5.7, PALETTE.mustard],
+          [2.05, 2.1, 0.075],
+          [1.6, 1.65, 0.225],
         ] as const
-      ).map(([inner, outer, color]) => (
-        <mesh key={inner} position={[0, 0.011, CZ]} rotation-x={-Math.PI / 2} receiveShadow>
-          <ringGeometry args={[inner, outer, 96]} />
-          <meshStandardMaterial color={color} roughness={0.8} />
-        </mesh>
+      ).map(([top, bottom, y]) => (
+        <group key={y}>
+          <mesh position={[0, y, CZ]} castShadow receiveShadow>
+            <cylinderGeometry args={[top, bottom, 0.15, 64]} />
+            <meshStandardMaterial color="#f6ecdc" map={marble} roughness={0.35} />
+          </mesh>
+          {/* Brass nosing along the step's edge. */}
+          <mesh position={[0, y + 0.07, CZ]} rotation-x={Math.PI / 2}>
+            <torusGeometry args={[top, 0.022, 8, 96]} />
+            <meshStandardMaterial color={PALETTE.brass} metalness={0.8} roughness={0.35} />
+          </mesh>
+        </group>
       ))}
-      {/* Two-step dais for the finale. */}
-      <mesh position={[0, 0.075, CZ]} castShadow receiveShadow>
-        <cylinderGeometry args={[2.05, 2.1, 0.15, 64]} />
-        <meshStandardMaterial color={PALETTE.stone} roughness={0.7} />
-      </mesh>
-      <mesh position={[0, 0.225, CZ]} castShadow receiveShadow>
-        <cylinderGeometry args={[1.6, 1.65, 0.15, 64]} />
-        <meshStandardMaterial color="#f2e6d2" roughness={0.7} />
-      </mesh>
     </group>
   );
 }
 
-/** Soft column of light falling from the oculus onto the dais. */
-function LightShaft() {
-  const height = H - HALL.daisHeight;
+/** Direction the sun's shafts travel: down, and a little to the left as seen from the door. */
+const RAY_DIRECTION = new Vector3(-0.42, -1, 0.16).normalize();
+
+/**
+ * Shafts of sunlight falling through the skylight: soft additive cards in
+ * crossed pairs, merged into one draw, with a warm pool where they land.
+ */
+function SunShafts() {
+  const ray = useProceduralTexture("lightRay");
+  const pool = useProceduralTexture("glowSpot");
+  const geometry = useMemo(() => {
+    const rand = mulberry32(17);
+    const top = H + RISE;
+    const length = top / -RAY_DIRECTION.y;
+    const up = RAY_DIRECTION.clone().negate();
+    const across = new Vector3().crossVectors(up, new Vector3(0, 0, 1)).normalize();
+    const facing = new Vector3().crossVectors(across, up);
+    const cards = [];
+    for (let i = 0; i < 10; i++) {
+      const a = rand() * Math.PI * 2;
+      const r = Math.sqrt(rand()) * OCULUS * 0.75;
+      const origin = new Vector3(Math.cos(a) * r, top, CZ + Math.sin(a) * r);
+      const width = 0.35 + rand() * 0.6;
+      for (const [x, z] of [
+        [across, facing],
+        [facing, across.clone().negate()],
+      ]) {
+        const card = new PlaneGeometry(width, length).translate(0, -length / 2, 0);
+        card.applyMatrix4(new Matrix4().makeBasis(x, up, z).setPosition(origin));
+        cards.push(card);
+      }
+    }
+    return mergeGeometries(cards);
+  }, []);
+
+  const landing = RAY_DIRECTION.clone().multiplyScalar((H + RISE) / -RAY_DIRECTION.y);
   return (
     <group>
-      <mesh position={[0, HALL.daisHeight + height / 2, CZ]}>
-        <cylinderGeometry args={[HALL.oculusRadius * 0.95, 1.5, height, 48, 1, true]} />
+      <mesh geometry={geometry}>
         <meshBasicMaterial
-          color="#fff0d2"
+          map={ray}
           transparent
-          opacity={0.045}
+          opacity={0.13}
           blending={AdditiveBlending}
           depthWrite={false}
           side={DoubleSide}
+          toneMapped={false}
           fog={false}
         />
       </mesh>
-      <pointLight color="#ffe8c8" intensity={22} distance={10} decay={2} position={[0, 4.6, CZ]} />
+      <mesh position={[landing.x, 0.02, CZ + landing.z]} rotation-x={-Math.PI / 2}>
+        <planeGeometry args={[4.2, 3.4]} />
+        <meshBasicMaterial
+          map={pool}
+          transparent
+          opacity={0.32}
+          blending={AdditiveBlending}
+          depthWrite={false}
+          toneMapped={false}
+          fog={false}
+        />
+      </mesh>
+      <pointLight color="#ffe2b8" intensity={26} distance={10} decay={2} position={[0, 4.6, CZ]} />
     </group>
   );
 }
 
-/** Arched, slightly darker recess behind an alcove look. */
+/** Cream stone arch framing a warmly lit niche behind an alcove look. */
 function Alcove({ degrees }: { degrees: number }) {
-  const geometry = useMemo(() => {
-    const w = 1.25;
-    const spring = 2.6;
+  const glow = useProceduralTexture("nicheGlow");
+  const stone = useHeritageTexture("limestone", 0.5, 1);
+  const { recess, frame } = useMemo(() => {
+    const w = 1.3;
+    const spring = 2.7;
     const s = new Shape();
     s.moveTo(-w, 0);
     s.lineTo(-w, spring);
     s.absarc(0, spring, w, Math.PI, 0, true);
     s.lineTo(w, 0);
     s.closePath();
-    return new ShapeGeometry(s, 24);
+    // Shape UVs are in metres; normalise them so the glow spans the niche once.
+    const recess = new ShapeGeometry(s, 24);
+    const pos = recess.attributes.position;
+    const uv = recess.attributes.uv;
+    for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) + w) / (2 * w), pos.getY(i) / (spring + w));
+    return {
+      recess,
+      frame: new ExtrudeGeometry(archBandShape(0, 0, w, spring, 0.24), {
+        depth: 0.24,
+        bevelEnabled: false,
+        curveSegments: 24,
+      }),
+    };
   }, []);
-  const rotation = ((degrees + 180) * Math.PI) / 180;
+  // Set slightly off the wall so the flat niche stays in front of the curve at its edges.
   return (
-    <mesh geometry={geometry} position={onHallRing(R - 0.1, degrees)} rotation-y={rotation} receiveShadow>
-      <meshStandardMaterial color="#c79f74" roughness={0.95} />
-    </mesh>
+    <group position={onHallRing(R - 0.16, degrees)} rotation-y={facingCentre(degrees)}>
+      <mesh geometry={recess} receiveShadow>
+        <meshStandardMaterial map={glow} emissive="#ffffff" emissiveMap={glow} emissiveIntensity={0.55} roughness={0.9} />
+      </mesh>
+      <mesh geometry={frame} castShadow receiveShadow>
+        <meshStandardMaterial color={PALETTE.hallStone} map={stone} roughness={0.65} />
+      </mesh>
+    </group>
   );
 }
 
-/** Hanging lantern with a warm point light, placed above a look. */
-function Lantern({ position }: { position: Vec3 }) {
-  const [x, , z] = position;
+/** Black iron lantern with a glowing glass body, hanging on a rod from the dome. */
+function Lantern({ degrees }: { degrees: number }) {
+  const radius = 7.4;
   const y = 3.9;
-  const drop = H - y;
+  const [x, , z] = onHallRing(radius, degrees);
+  const rod = ceilingHeightAt(radius) - (y + 0.38);
   return (
     <group position={[x, y, z]}>
-      <mesh position={[0, drop / 2, 0]}>
-        <cylinderGeometry args={[0.012, 0.012, drop, 6]} />
-        <meshStandardMaterial color={PALETTE.timber} />
+      <mesh position={[0, 0.38 + rod / 2, 0]}>
+        <cylinderGeometry args={[0.014, 0.014, rod, 6]} />
+        <meshStandardMaterial color={PALETTE.iron} />
+      </mesh>
+      <mesh position={[0, 0.3, 0]}>
+        <cylinderGeometry args={[0.03, 0.19, 0.16, 6]} />
+        <meshStandardMaterial color={PALETTE.iron} roughness={0.5} metalness={0.4} />
       </mesh>
       <mesh>
-        <cylinderGeometry args={[0.15, 0.12, 0.34, 16]} />
+        <cylinderGeometry args={[0.15, 0.12, 0.44, 6]} />
         <meshStandardMaterial
           color={PALETTE.lanternGlow}
           emissive={PALETTE.lanternGlow}
@@ -205,7 +381,30 @@ function Lantern({ position }: { position: Vec3 }) {
           toneMapped={false}
         />
       </mesh>
+      <mesh position={[0, -0.26, 0]}>
+        <cylinderGeometry args={[0.13, 0.05, 0.1, 6]} />
+        <meshStandardMaterial color={PALETTE.iron} roughness={0.5} metalness={0.4} />
+      </mesh>
       <pointLight color="#ffc78a" intensity={14} distance={9} decay={2} position={[0, -0.3, 0]} />
+    </group>
+  );
+}
+
+/** Red and gold banner hanging from an iron rod on the wall. */
+function Banner({ degrees }: { degrees: number }) {
+  const texture = useProceduralTexture("hallBanner");
+  const width = 0.9;
+  const length = 2.7;
+  return (
+    <group position={onHallRing(R - 0.2, degrees, 5.0)} rotation-y={facingCentre(degrees)}>
+      <mesh position={[0, -length / 2, 0]} castShadow receiveShadow>
+        <planeGeometry args={[width, length]} />
+        <meshStandardMaterial map={texture} alphaTest={0.5} roughness={0.85} side={DoubleSide} />
+      </mesh>
+      <mesh rotation-z={Math.PI / 2}>
+        <cylinderGeometry args={[0.025, 0.025, width + 0.25, 8]} />
+        <meshStandardMaterial color={PALETTE.iron} roughness={0.5} metalness={0.4} />
+      </mesh>
     </group>
   );
 }
@@ -234,15 +433,22 @@ export function InnerHall() {
   return (
     <group>
       <CurvedWall />
-      <Ceiling />
+      <Pilasters />
+      <Dome />
       <Floor />
-      <LightShaft />
+      <SunShafts />
       <Textile />
       {ALCOVE_ANGLES.map((deg) => (
-        <group key={deg}>
-          <Alcove degrees={deg} />
-          <Lantern position={onHallRing(ALCOVE_RADIUS, deg)} />
-        </group>
+        <Alcove key={deg} degrees={deg} />
+      ))}
+      {LANTERN_ANGLES.map((deg) => (
+        <Lantern key={deg} degrees={deg} />
+      ))}
+      {BANNER_ANGLES.map((deg) => (
+        <Banner key={deg} degrees={deg} />
+      ))}
+      {OLIVE_ANGLES.map((deg, i) => (
+        <OliveTree key={deg} position={onHallRing(8.1, deg)} scale={0.6} seed={80 + i} />
       ))}
     </group>
   );

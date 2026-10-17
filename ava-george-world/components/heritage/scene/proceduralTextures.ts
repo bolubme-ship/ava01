@@ -281,6 +281,249 @@ const cloud: Painter = (ctx, w, h, rand) => {
   }
 };
 
+// ---------------------------------------------------------------------------
+// Inner hall
+
+const HALL_GOLD = "#c99a45";
+const HALL_NAVY = "#1f2d4f";
+
+/**
+ * The hall's polished floor, painted as one disc (the canvas spans the
+ * rotunda's diameter, 18 m): cream marble slabs with fine joints and faint
+ * veining, a navy-and-gold ring and compass star around the dais, and a
+ * band of diamonds around the edge.
+ */
+const hallFloor: Painter = (ctx, w, h, rand) => {
+  const k = w / 18; // pixels per metre
+  const cx = w / 2;
+  const cy = h / 2;
+  ctx.fillStyle = "#efe2cb";
+  ctx.fillRect(0, 0, w, h);
+  // Slabs: 1.5 m squares, each a slightly different cream.
+  const slab = 1.5 * k;
+  for (let y = 0; y < h; y += slab) {
+    for (let x = 0; x < w; x += slab) {
+      const t = rand();
+      ctx.fillStyle = `rgba(${236 + t * 12},${222 + t * 12},${198 + t * 14},1)`;
+      ctx.fillRect(x, y, slab, slab);
+    }
+  }
+  for (let i = 0; i < 60; i++) {
+    const g = ctx.createRadialGradient(rand() * w, rand() * h, 0, rand() * w, rand() * h, 60 + rand() * 200);
+    g.addColorStop(0, "rgba(214,190,150,0.16)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+  for (let v = 0; v < 40; v++) {
+    let x = rand() * w;
+    let y = rand() * h;
+    ctx.strokeStyle = `rgba(170,150,125,${0.08 + rand() * 0.12})`;
+    ctx.lineWidth = 0.6 + rand() * 1.4;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    for (let s = 0; s < 30; s++) {
+      x += (rand() - 0.3) * 30;
+      y += (rand() - 0.5) * 30;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(150,125,95,0.35)";
+  ctx.lineWidth = 1.2;
+  for (let p = 0; p <= w; p += slab) {
+    ctx.beginPath();
+    ctx.moveTo(p, 0);
+    ctx.lineTo(p, h);
+    ctx.moveTo(0, p);
+    ctx.lineTo(w, p);
+    ctx.stroke();
+  }
+
+  const ring = (r: number, width: number, color: string) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width * k;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * k, 0, Math.PI * 2);
+    ctx.stroke();
+  };
+  // Compass star radiating from beneath the dais.
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    const long = i % 2 === 0;
+    const tip = (long ? 3.9 : 3.0) * k;
+    const half = (Math.PI / 16) * 0.9;
+    for (const side of [-1, 1]) {
+      ctx.fillStyle = side < 0 ? (long ? HALL_NAVY : "#a77a35") : long ? "#33456e" : HALL_GOLD;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(a) * tip, cy + Math.sin(a) * tip);
+      ctx.lineTo(cx + Math.cos(a + side * half) * 1.9 * k, cy + Math.sin(a + side * half) * 1.9 * k);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  ring(4.65, 0.5, HALL_NAVY);
+  ring(4.36, 0.06, HALL_GOLD);
+  ring(4.94, 0.06, HALL_GOLD);
+  ring(5.5, 0.04, HALL_GOLD);
+
+  // Diamond band around the edge.
+  ring(8.4, 0.62, HALL_NAVY);
+  ring(8.07, 0.05, HALL_GOLD);
+  ring(8.73, 0.05, HALL_GOLD);
+  const count = 72;
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2;
+    const r = 8.4 * k;
+    const x = cx + Math.cos(a) * r;
+    const y = cy + Math.sin(a) * r;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(a);
+    ctx.fillStyle = i % 2 === 0 ? HALL_GOLD : "#e9d9b8";
+    ctx.beginPath();
+    ctx.moveTo(-0.26 * k, 0);
+    ctx.lineTo(0, -0.33 * k);
+    ctx.lineTo(0.26 * k, 0);
+    ctx.lineTo(0, 0.33 * k);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  speckle(ctx, w, h, rand, 20000, 0.05);
+};
+
+/** Deep red banner with a gold border, a gold wheat sprig and a swallowtail hem. */
+const hallBanner: Painter = (ctx, w, h) => {
+  ctx.clearRect(0, 0, w, h);
+  const notch = h * 0.07;
+  const body = new Path2D();
+  body.moveTo(0, 0);
+  body.lineTo(w, 0);
+  body.lineTo(w, h);
+  body.lineTo(w / 2, h - notch);
+  body.lineTo(0, h);
+  body.closePath();
+  const g = ctx.createLinearGradient(0, 0, w, 0);
+  g.addColorStop(0, "#5e0f12");
+  g.addColorStop(0.5, "#8c1d1f");
+  g.addColorStop(1, "#5e0f12");
+  ctx.fillStyle = g;
+  ctx.fill(body);
+  ctx.save();
+  ctx.clip(body);
+  ctx.strokeStyle = HALL_GOLD;
+  ctx.lineWidth = w * 0.025;
+  const inset = w * 0.08;
+  ctx.beginPath();
+  ctx.moveTo(inset, 0);
+  ctx.lineTo(inset, h - notch * 0.6 - inset * 0.5);
+  ctx.moveTo(w - inset, 0);
+  ctx.lineTo(w - inset, h - notch * 0.6 - inset * 0.5);
+  ctx.stroke();
+  // Wheat sprig: a stem with paired grains.
+  ctx.strokeStyle = "#d9ae5a";
+  ctx.fillStyle = "#d9ae5a";
+  ctx.lineWidth = w * 0.022;
+  const top = h * 0.24;
+  const bottom = h * 0.72;
+  ctx.beginPath();
+  ctx.moveTo(w / 2, top);
+  ctx.lineTo(w / 2, bottom);
+  ctx.stroke();
+  for (let i = 0; i < 7; i++) {
+    const y = top + (i / 7) * (bottom - top) * 0.8;
+    for (const side of [-1, 1]) {
+      ctx.save();
+      ctx.translate(w / 2 + side * w * 0.07, y + w * 0.05);
+      ctx.rotate(side * 0.55);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w * 0.05, w * 0.12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  ctx.beginPath();
+  ctx.ellipse(w / 2, top - w * 0.06, w * 0.045, w * 0.11, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+};
+
+/** Warm wash inside a lit niche: brightest beneath the arch, falling off towards the floor. */
+const nicheGlow: Painter = (ctx, w, h) => {
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, "#ffd88e");
+  g.addColorStop(0.45, "#f0b765");
+  g.addColorStop(1, "#b97a3f");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  const r = ctx.createRadialGradient(w / 2, h * 0.12, 0, w / 2, h * 0.12, h * 0.6);
+  r.addColorStop(0, "rgba(255,240,200,0.75)");
+  r.addColorStop(1, "rgba(255,240,200,0)");
+  ctx.fillStyle = r;
+  ctx.fillRect(0, 0, w, h);
+};
+
+/** Radial timber boarding for the hall's ceiling: boards run along v. */
+const timberBoards: Painter = (ctx, w, h, rand) => {
+  const boards = 8;
+  const bw = w / boards;
+  for (let i = 0; i < boards; i++) {
+    const t = rand();
+    ctx.fillStyle = `rgb(${120 + t * 40},${76 + t * 26},${42 + t * 16})`;
+    ctx.fillRect(i * bw, 0, bw, h);
+    for (let g = 0; g < 14; g++) {
+      ctx.strokeStyle = `rgba(${rand() > 0.5 ? "70,40,20" : "190,140,90"},${0.12 + rand() * 0.18})`;
+      ctx.lineWidth = 0.6 + rand();
+      const x = i * bw + rand() * bw;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.bezierCurveTo(x + (rand() - 0.5) * 6, h / 3, x + (rand() - 0.5) * 6, (2 * h) / 3, x, h);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(40,22,10,0.55)";
+    ctx.fillRect(i * bw, 0, 1.5, h);
+  }
+};
+
+/** Soft beam of light: bright at the top, fading along its length and to both edges. */
+const lightRay: Painter = (ctx, w, h) => {
+  const img = ctx.createImageData(w, h);
+  for (let y = 0; y < h; y++) {
+    const along = Math.pow(1 - y / h, 1.6);
+    for (let x = 0; x < w; x++) {
+      const across = Math.exp(-Math.pow((x / w - 0.5) * 4.2, 2));
+      const i = (y * w + x) * 4;
+      img.data[i] = 255;
+      img.data[i + 1] = 236;
+      img.data[i + 2] = 196;
+      img.data[i + 3] = Math.round(255 * along * across);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+};
+
+/** Soft round pool of light, for sunlight landing on the floor. */
+const glowSpot: Painter = (ctx, w, h) => {
+  const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, "rgba(255,226,170,1)");
+  g.addColorStop(0.5, "rgba(255,214,150,0.45)");
+  g.addColorStop(1, "rgba(255,214,150,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+};
+
+/** Glow washing up from a hidden cove light: bright along the bottom edge. */
+const coveGlow: Painter = (ctx, w, h) => {
+  const g = ctx.createLinearGradient(0, h, 0, 0);
+  g.addColorStop(0, "rgba(255,214,140,1)");
+  g.addColorStop(0.35, "rgba(255,190,110,0.35)");
+  g.addColorStop(1, "rgba(255,190,110,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+};
+
 const PAINTERS = {
   stoneTiles: [1024, 1024, stoneTiles],
   rug: [256, 1024, rug],
@@ -288,6 +531,13 @@ const PAINTERS = {
   carvedClay: [512, 256, carvedClay],
   marble: [512, 512, marble],
   cloud: [256, 128, cloud],
+  hallFloor: [2048, 2048, hallFloor],
+  hallBanner: [256, 768, hallBanner],
+  nicheGlow: [128, 256, nicheGlow],
+  timberBoards: [512, 256, timberBoards],
+  lightRay: [64, 256, lightRay],
+  coveGlow: [16, 128, coveGlow],
+  glowSpot: [128, 128, glowSpot],
 } as const;
 
 export type ProceduralTextureName = keyof typeof PAINTERS;

@@ -178,10 +178,14 @@ function lookOneStation(p: PedestalConfig): CameraStation {
 
 const PEDESTAL_STATIONS = PEDESTALS.map((p, i) => (i === 0 ? lookOneStation(p) : framingFor(p)));
 
-/** Pause on the archway, looking through it into the hall, before stepping inside. */
+/**
+ * Pause in the archway, the stone arch framing the view, looking up into the
+ * hall's dome and across to the finale before stepping inside.
+ */
 const THRESHOLD_STATION: CameraStation = {
-  position: [0, 1.75, -COURTYARD.halfZ + 5.8],
-  target: [0, 1.7, HALL.centerZ],
+  position: [0, 1.6, -COURTYARD.halfZ + 3.0],
+  target: [0, 2.6, HALL.centerZ - 3],
+  lens: 1.2,
 };
 
 const NUMBER_WORDS = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -281,6 +285,7 @@ export const PALETTE = {
   mustard: "#d9a23a",
   hallWall: "#fbe9d9",
   hallFloor: "#e8cdb0",
-  hallCeiling: "#5e3d24",
+  hallStone: "#f1e4cc",
+  iron: "#2a2420",
   lanternGlow: "#ffcf8a",
 };
