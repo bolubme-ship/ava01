@@ -43,7 +43,7 @@ export default function HeritageCanvas({
     <Canvas
       shadows="percentage"
       dpr={[1, 1.75]}
-      gl={{ antialias: true, powerPreference: "high-performance", toneMappingExposure: 1.05 }}
+      gl={{ antialias: true, powerPreference: "high-performance", toneMappingExposure: 1.12 }}
       camera={{ position: CAMERA_STATIONS[0].position, fov: 42, near: 0.1, far: 260 }}
       eventSource={eventSource as RefObject<HTMLElement>}
       eventPrefix="client"

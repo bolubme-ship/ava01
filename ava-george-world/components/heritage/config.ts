@@ -262,11 +262,11 @@ export function facingRotation(pedestalIndex: number): number {
 export const PALETTE = {
   haze: "#f1d9bd",
   /*
-   * Walls use a photographed terracotta plaster texture; these are tints
-   * multiplied over it (white = the plaster's own colour).
+   * Walls use a photographed plaster texture in neutral cream; these tints
+   * give it its colour: warm sandstone ochre, golden in the low sun.
    */
-  wallWarm: "#ecd3c3",
-  wallLight: "#ffffff",
+  wallWarm: "#e0a074",
+  wallLight: "#e9ab80",
   wallTrim: "#eec594",
   niche: "#b98d78",
   canopyTerracotta: "#c8733f",
@@ -276,6 +276,8 @@ export const PALETTE = {
   clay: "#b0603a",
   foliage: "#6f7d3c",
   stone: "#eadbc2",
+  courtyardFloor: "#f3c9a6",
+  leafShade: "#5c2a12",
   brass: "#c49a52",
   indigoCloth: "#2c3f6b",
   mustard: "#d9a23a",

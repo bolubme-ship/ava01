@@ -1,7 +1,7 @@
 "use client";
 
 import { useThree } from "@react-three/fiber";
-import { Bloom, EffectComposer, N8AO, ToneMapping } from "@react-three/postprocessing";
+import { Bloom, BrightnessContrast, EffectComposer, HueSaturation, N8AO, ToneMapping } from "@react-three/postprocessing";
 import { ToneMappingMode } from "postprocessing";
 
 /**
@@ -12,6 +12,8 @@ import { ToneMappingMode } from "postprocessing";
  * - Bloom on the brightest highlights only, so the lanterns glow.
  * - Filmic tone mapping (applied here because the composer renders the
  *   scene off-screen, where the renderer's own tone mapping doesn't run).
+ * - A richer, punchier grade after it: more saturation and a touch of
+ *   contrast, for the vivid golden-hour colour of the art direction.
  *
  * Phones get half-resolution occlusion and no multisampling to stay smooth.
  */
@@ -30,6 +32,8 @@ export function PostEffects() {
       />
       <Bloom mipmapBlur luminanceThreshold={1} luminanceSmoothing={0.2} intensity={0.55} />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+      <HueSaturation saturation={0.12} />
+      <BrightnessContrast brightness={0.02} contrast={0.08} />
     </EffectComposer>
   );
 }

@@ -5,6 +5,7 @@ import { Instance, Instances } from "@react-three/drei";
 import { ExtrudeGeometry, Shape, ShapeGeometry } from "three";
 import { COURTYARD, GATE, HALL, PALETTE, PEDESTALS, type Vec3 } from "../config";
 import { ArchedWall, archBandShape, type ArchOpening, type ArchTrim } from "./ArchedWall";
+import { DappledShade } from "./DappledShade";
 import { CanopySail, Kilim, WallSconce } from "./Fabrics";
 import { Bougainvillea, CardPlant, CarvedPot, FloweringShrub, IvyCurtain, OliveTree, PottedPlant } from "./Planting";
 import { useHeritageTexture } from "./assets";
@@ -79,7 +80,13 @@ function Ground() {
     <group>
       <mesh rotation-x={-Math.PI / 2} receiveShadow>
         <planeGeometry args={[120, 120]} />
-        <meshStandardMaterial map={tiles} normalMap={tilesNormal} normalScale={[0.8, 0.8]} roughness={0.68} />
+        <meshStandardMaterial
+          color={PALETTE.courtyardFloor}
+          map={tiles}
+          normalMap={tilesNormal}
+          normalScale={[0.8, 0.8]}
+          roughness={0.68}
+        />
       </mesh>
       {/* Smaller rugs either side of the entrance, as in a lived-in courtyard. */}
       {[-1, 1].map((side) => (
@@ -564,6 +571,7 @@ export function Courtyard() {
       <Climbers />
       <BlindNiches />
       <Garden />
+      <DappledShade />
       <Furnishings />
     </group>
   );
