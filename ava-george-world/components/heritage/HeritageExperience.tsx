@@ -7,7 +7,6 @@ import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
 import { useScrollProgress } from "./hooks/useScrollProgress";
 import { useSmoothScroll } from "./hooks/useSmoothScroll";
 import { ChapterOverlay } from "./ui/ChapterOverlay";
-import { ScrollCue } from "./ui/Hero";
 import { SiteHeader } from "./ui/SiteHeader";
 
 // WebGL needs the browser, so the canvas is never server-rendered.
@@ -74,7 +73,6 @@ export function HeritageExperience() {
       />
 
       <SiteHeader />
-      <ScrollCue />
 
       <ChapterOverlay chapters={CHAPTERS} progress={progress} onExplore={() => scrollToStop(1)} />
 

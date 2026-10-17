@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import type { Chapter } from "../config";
 import { MaskedWords, revealClass, revealDelay } from "./reveal";
 
@@ -56,50 +55,27 @@ export function Hero({ chapter, active, onExplore }: HeroProps) {
             type="button"
             onClick={onExplore}
             tabIndex={active ? 0 : -1}
-            className={`group inline-flex items-center gap-4 rounded-full bg-[#a9472b] px-8 py-4 text-sm font-medium tracking-[0.18em] text-white uppercase shadow-[0_10px_30px_-10px_rgba(80,25,10,0.7)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#93391f] hover:shadow-[0_16px_36px_-12px_rgba(80,25,10,0.8)] focus-visible:ring-2 focus-visible:ring-[#fffaf2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#a9472b] focus-visible:outline-none active:translate-y-0 ${
+            aria-label="Scroll to explore the courtyard"
+            className={`group inline-flex items-center gap-3 rounded-full bg-[#a9472b] py-1.5 pr-1.5 pl-6 text-sm font-medium tracking-[0.2em] text-white uppercase shadow-[0_10px_30px_-10px_rgba(80,25,10,0.7)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#93391f] focus-visible:ring-2 focus-visible:ring-[#fffaf2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#a9472b] focus-visible:outline-none active:translate-y-0 ${
               active ? "pointer-events-auto" : "pointer-events-none"
             }`}
           >
-            Explore the courtyard
-            <svg
-              viewBox="0 0 20 12"
-              className="h-3 w-5 transition-transform duration-300 group-hover:translate-x-1.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              aria-hidden="true"
-            >
-              <path d="M0 6h18M13 1l5 5-5 5" />
-            </svg>
+            Scroll
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#fffaf2] text-[#a9472b]">
+              <svg
+                viewBox="0 0 12 16"
+                className="h-4 w-3 motion-safe:animate-bounce"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.6}
+                aria-hidden="true"
+              >
+                <path d="M6 1v13M1.5 9.5 6 14l4.5-4.5" />
+              </svg>
+            </span>
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-/** "Scroll to explore" prompt pinned bottom-centre; fades once the visitor starts scrolling. */
-export function ScrollCue() {
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const onScroll = () => setVisible(window.scrollY < 40);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  return (
-    <div
-      className={`pointer-events-none fixed inset-x-0 bottom-6 z-20 flex flex-col items-center gap-2 text-[#fffaf2] transition-opacity duration-500 ${
-        visible ? "opacity-100" : "opacity-0"
-      }`}
-      aria-hidden={!visible}
-    >
-      <span className="text-[11px] tracking-[0.32em] uppercase drop-shadow">Scroll to explore</span>
-      <svg viewBox="0 0 12 16" className="h-4 w-3 motion-safe:animate-bounce" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
-        <path d="M6 0v14M1 9l5 5 5-5" />
-      </svg>
     </div>
   );
 }
