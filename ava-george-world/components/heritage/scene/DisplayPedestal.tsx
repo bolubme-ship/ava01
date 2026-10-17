@@ -36,6 +36,12 @@ interface DisplayPedestalProps {
 }
 
 const PLINTH_TOP = 0.69;
+/**
+ * The garment (and its stand) is shown larger than life so the clothes,
+ * not the setting, are the main attraction. Keep GARMENT_FOCUS_Y in
+ * config.ts in step: it aims the camera at the middle of the garment.
+ */
+const GARMENT_SCALE = 1.45;
 const BRASS = "#c39a52";
 
 /**
@@ -93,7 +99,7 @@ export function DisplayPedestal({
   return (
     <group position={position} rotation-y={rotationY} onPointerOver={over} onPointerOut={out} onClick={click}>
       <Plinth ringMaterial={ring} poolMaterial={pool} />
-      <group position={[0, PLINTH_TOP, 0]}>
+      <group position={[0, PLINTH_TOP, 0]} scale={GARMENT_SCALE}>
         {image ? (
           <PhotoGarment image={image} />
         ) : (

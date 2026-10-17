@@ -146,7 +146,7 @@ export const PEDESTALS: PedestalConfig[] = LOOKS.map((look, i) => ({
 }));
 
 /** Height (above the floor) the camera looks at when framing a garment. */
-const GARMENT_FOCUS_Y = 1.3;
+const GARMENT_FOCUS_Y = 1.85;
 
 /**
  * Courtyard: the camera stands across the path from each look and a few
@@ -160,14 +160,14 @@ function framingFor(p: PedestalConfig): CameraStation {
   const target: Vec3 = [x, y + GARMENT_FOCUS_Y, z];
   if (p.zone === "courtyard") {
     const side = Math.sign(x);
-    return { position: [x - side * 2.4, 1.75, z + 5.4], target };
+    return { position: [x - side * 2.4, 1.95, z + 5.4], target };
   }
   const radial = Math.hypot(x, z - HALL.centerZ);
   if (radial < 0.01) {
-    return { position: [0.8, 1.9, HALL.centerZ + 4.8], target };
+    return { position: [0.8, 2.1, HALL.centerZ + 5.0], target };
   }
   const degrees = (Math.atan2(x, z - HALL.centerZ) * 180) / Math.PI;
-  return { position: onHallRing(ORBIT_RADIUS, degrees, 1.75), target };
+  return { position: onHallRing(ORBIT_RADIUS, degrees, 1.95), target };
 }
 
 /**
@@ -189,7 +189,7 @@ const AVENUE_STATION: CameraStation = {
  */
 function lookOneStation(p: PedestalConfig): CameraStation {
   const [x, y, z] = p.position;
-  return { position: [0.8, 1.7, z + 2.7], target: [x, y + GARMENT_FOCUS_Y, z] };
+  return { position: [0.8, 1.9, z + 3.6], target: [x, y + GARMENT_FOCUS_Y, z] };
 }
 
 const PEDESTAL_STATIONS = PEDESTALS.map((p, i) => (i === 0 ? lookOneStation(p) : framingFor(p)));
