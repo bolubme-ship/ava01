@@ -223,7 +223,7 @@ const STOPS: Stop[] = [
     chapter: {
       eyebrow: "Ava & George World",
       title: "The Heritage Collection",
-      body: "African childhood, beautifully imagined. Colour, culture and craftsmanship for little lives everywhere.",
+      body: "",
     },
   },
   {

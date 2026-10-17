@@ -30,9 +30,11 @@ export function Hero({ chapter, onExplore }: HeroProps) {
             </span>
           ))}
         </h1>
-        <p className="mt-6 max-w-[24rem] text-base leading-relaxed text-[#fffaf2]/95 drop-shadow sm:text-lg">
-          {chapter.body}
-        </p>
+        {chapter.body && (
+          <p className="mt-6 max-w-[24rem] text-base leading-relaxed text-[#fffaf2]/95 drop-shadow sm:text-lg">
+            {chapter.body}
+          </p>
+        )}
         <button
           type="button"
           onClick={onExplore}
