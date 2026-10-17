@@ -6,7 +6,7 @@ import { ExtrudeGeometry, Shape, ShapeGeometry } from "three";
 import { COURTYARD, GATE, HALL, PALETTE, PEDESTALS, type Vec3 } from "../config";
 import { ArchedWall, archBandShape, type ArchOpening, type ArchTrim } from "./ArchedWall";
 import { CanopySail, Kilim, WallSconce } from "./Fabrics";
-import { Bougainvillea, CardPlant, CarvedPot, CitrusTree, FloweringShrub, IvyCurtain, OliveTree, PottedPlant } from "./Planting";
+import { Bougainvillea, CardPlant, CarvedPot, FloweringShrub, IvyCurtain, OliveTree, PottedPlant } from "./Planting";
 import { useHeritageTexture } from "./assets";
 import { useSurfaceTexture } from "./surfaceTexture";
 
@@ -481,9 +481,9 @@ function Garden() {
       {/* Olive trees in front of the side doors, flanking the hall archway. */}
       <OliveTree position={[-4.8, 0, -10.6]} seed={31} />
       <OliveTree position={[4.8, 0, -10.6]} seed={32} />
-      {/* Citrus and lemon trees part-way down each side. */}
-      <CitrusTree position={[-7.7, 0, 1.0]} scale={0.95} seed={33} />
-      <CitrusTree position={[7.7, 0, -2.6]} scale={0.95} seed={34} />
+      {/* Lemon trees, a palm and an olive part-way down each side. */}
+      <CardPlant kind="palm" position={[-7.7, 0, 1.0]} scale={0.9} seed={33} />
+      <OliveTree position={[7.7, 0, -2.6]} scale={0.85} seed={34} />
       <CardPlant kind="lemonTree" position={[-7.7, 0, -4.5]} seed={35} />
       <CardPlant kind="lemonTree" position={[7.7, 0, 4.5]} seed={36} />
 

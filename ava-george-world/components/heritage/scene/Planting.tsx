@@ -6,7 +6,6 @@ import {
   PlaneGeometry,
   Color,
   DoubleSide,
-  IcosahedronGeometry,
   InstancedMesh,
   LatheGeometry,
   Object3D,
@@ -58,9 +57,6 @@ function useInstances(ref: React.RefObject<InstancedMesh | null>, blobs: Blob[])
     mesh.computeBoundingSphere();
   }, [ref, blobs]);
 }
-
-/** Small round blob for fruit. */
-const blobGeometry = new IcosahedronGeometry(1, 1);
 
 /** Pointed leaf card (≈8 triangles), 2 units long on y, double-sided. */
 const leafGeometry = (() => {
@@ -306,58 +302,6 @@ export function PottedPlant({ position, scale = 1, seed = 3 }: { position: Vec3;
           <meshStandardMaterial map={agave} alphaTest={0.5} side={DoubleSide} roughness={0.6} />
         </mesh>
       ))}
-    </group>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Citrus tree
-
-/** Small round-crowned citrus tree in a planter, dotted with oranges. */
-export function CitrusTree({ position, scale = 1, seed = 5 }: { position: Vec3; scale?: number; seed?: number }) {
-  const { leaves, fruit } = useMemo(() => {
-    const rand = mulberry32(seed);
-    const center = new Vector3(0, 2.55, 0);
-    const leaves: Blob[] = [];
-    const fruit: Blob[] = [];
-    for (let i = 0; i < 1000; i++) {
-      // Points on a slightly squashed sphere shell, biased outward.
-      const dir = new Vector3(rand() * 2 - 1, (rand() * 2 - 1) * 0.85, rand() * 2 - 1).normalize();
-      const r = 0.95 * (0.75 + rand() * 0.3);
-      const s = 0.06 + rand() * 0.035;
-      leaves.push({
-        position: center.clone().addScaledVector(dir, r),
-        scale: leafScale(s, rand),
-        rotation: new Vector3(rand() * 6.28, rand() * 6.28, rand() * 6.28),
-        color: LEAF_COLORS[Math.floor(rand() * LEAF_COLORS.length)],
-      });
-    }
-    for (let i = 0; i < 26; i++) {
-      const dir = new Vector3(rand() * 2 - 1, (rand() * 2 - 1) * 0.8, rand() * 2 - 1).normalize();
-      fruit.push({
-        position: center.clone().addScaledVector(dir, 0.98),
-        scale: new Vector3(0.075, 0.075, 0.075),
-        rotation: new Vector3(),
-        color: rand() > 0.3 ? "#f29a1f" : "#f6c03a",
-      });
-    }
-    return { leaves, fruit };
-  }, [seed]);
-
-  return (
-    <group position={position} scale={scale}>
-      <CarvedPot position={[0, 0, 0]} shape="planter" scale={1.4} />
-      <mesh position={[0, 1.5, 0]} castShadow>
-        <cylinderGeometry args={[0.05, 0.08, 1.8, 8]} />
-        <meshStandardMaterial color="#5a3a24" roughness={0.9} />
-      </mesh>
-      {/* Dark inner crown so gaps between leaves read as depth, not sky. */}
-      <mesh position={[0, 2.55, 0]} scale={[0.82, 0.72, 0.82]} castShadow>
-        <sphereGeometry args={[1, 20, 14]} />
-        <meshStandardMaterial color="#2c4a1c" roughness={0.9} />
-      </mesh>
-      <BlobCloud blobs={leaves} wind={0.008} />
-      <BlobCloud blobs={fruit} wind={0.006} geometry={blobGeometry} />
     </group>
   );
 }

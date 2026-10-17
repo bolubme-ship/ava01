@@ -35,7 +35,7 @@ Each item below names the component it would replace.
 | Asset | Format | Replaces |
 |---|---|---|
 | Bougainvillea climber (a few variants) | GLB with alpha-cut leaf cards | `Bougainvillea` in `scene/Planting.tsx` |
-| Potted citrus / olive tree | GLB, < 2 MB | `CitrusTree` |
+| Potted olive tree | GLB, < 2 MB | `OliveTree` |
 | Potted fern / palm, flowering shrub | GLB | `PottedPlant`, `FloweringShrub` |
 | Carved terracotta pots (2–3 shapes) | GLB or PBR texture for the existing lathe shapes | `CarvedPot` |
 | Wall lantern | GLB | `WallSconce` in `scene/Fabrics.tsx` |
