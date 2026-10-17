@@ -1,17 +1,21 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import { Instance, Instances } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import {
   AdditiveBlending,
   CircleGeometry,
   Color,
+  CylinderGeometry,
   DoubleSide,
   ExtrudeGeometry,
   LatheGeometry,
   Object3D,
   PlaneGeometry,
+  SphereGeometry,
   Vector2,
+  type BufferGeometry,
   type Group,
   type InstancedMesh,
 } from "three";
@@ -208,48 +212,124 @@ const lanternDome = new LatheGeometry(
   12,
 );
 
+interface LanternSpec {
+  /** Where the lantern's base sits. */
+  position: Vec3;
+  /** 1 = about 0.65 m tall. */
+  size: number;
+  /** Length of chain above it (0 = standing on the ground). */
+  chain: number;
+}
+
+const LANTERN_HEIGHT = 0.65;
+const PASSAGE_Z = GATE_FACE_Z - 0.35;
+const PILLAR_ARM = { y: 3.7, reach: 0.45 };
+const soffitAt = (x: number) => ARCH_SPRING + Math.sqrt(ARCH_RADIUS ** 2 - x ** 2);
+
+/** Every lantern at the entrance: in the arch, on the pillars and lining the approach. */
+const LANTERNS: LanternSpec[] = [
+  // Centre of the arch, in front of the swags.
+  { position: [0, 4.15, GATE_FACE_Z + SURROUND_DEPTH + 0.55], size: 1.25, chain: DRAPE_TOP - 4.15 - LANTERN_HEIGHT * 1.25 },
+  // Either side, just inside the arch.
+  ...[-1, 1].map((side) => ({
+    position: [side * 2.45, 3.75, PASSAGE_Z] as Vec3,
+    size: 1,
+    chain: soffitAt(2.45) - 3.75 - LANTERN_HEIGHT,
+  })),
+  // Hanging from an iron arm on the front of each pillar.
+  ...[-1, 1].map((side) => ({
+    position: [
+      side * ENTRANCE.pillarX,
+      PILLAR_ARM.y - 0.2 - LANTERN_HEIGHT * 0.9,
+      ENTRANCE.pillarFrontZ + PILLAR_ARM.reach,
+    ] as Vec3,
+    size: 0.9,
+    chain: 0.2,
+  })),
+  // Standing along the approach to the gate.
+  ...[-1, 1].flatMap((side) =>
+    [13.7, 14.9, 16.1].map((z) => ({ position: [side * 1.9, 0, z] as Vec3, size: 0.9, chain: 0 })),
+  ),
+];
+
+const lanternBase = new CylinderGeometry(0.15, 0.17, 0.06, 6);
+const lanternCore = new CylinderGeometry(0.125, 0.125, 0.32, 6);
+const lanternShell = new CylinderGeometry(0.15, 0.15, 0.34, 6, 1, true);
+const lanternCrownGlow = new SphereGeometry(0.07, 10, 8);
+const lanternFinial = new SphereGeometry(0.028, 8, 6);
+const chainGeometry = new CylinderGeometry(0.008, 0.008, 1, 4);
+
+/** One part of every lantern, drawn together; `y` is the part's height in a size-1 lantern. */
+function LanternPart({
+  geometry,
+  y,
+  castShadow = false,
+  children,
+}: {
+  geometry: BufferGeometry;
+  y: number;
+  castShadow?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Instances geometry={geometry} limit={LANTERNS.length} castShadow={castShadow}>
+      {children}
+      {LANTERNS.map(({ position: [x, by, z], size }, i) => (
+        <Instance key={i} position={[x, by + y * size, z]} scale={size} />
+      ))}
+    </Instances>
+  );
+}
+
 /**
- * Moroccan lantern, about 0.65 m tall at size 1: a hexagonal brass body with
- * lattice windows over a glowing core, a pierced dome and a soft halo.
- * `chain` hangs it that far below its anchor (0 = standing on the ground).
+ * Moroccan lanterns, about 0.65 m tall at size 1: a hexagonal brass body
+ * with lattice windows over a glowing core, a pierced dome and a soft halo.
+ * Each part is one instanced draw for all of them.
  */
-function MoroccanLantern({ position, size = 1, chain = 0 }: { position: Vec3; size?: number; chain?: number }) {
+function Lanterns() {
   const panel = useProceduralTexture("lanternPanel", 6, 1);
   const pierce = useProceduralTexture("lanternPierce", 2, 1);
   const glow = useProceduralTexture("glowSpot");
+  const hanging = LANTERNS.filter((l) => l.chain > 0);
   return (
-    <group position={position}>
-      {chain > 0 && (
-        <mesh position={[0, 0.65 * size + chain / 2, 0]}>
-          <cylinderGeometry args={[0.008, 0.008, chain, 4]} />
-          <meshStandardMaterial color="#3a2a1a" metalness={0.5} roughness={0.5} />
+    <group>
+      <LanternPart geometry={lanternBase} y={0.03} castShadow>
+        <meshStandardMaterial color={BRASS} metalness={0.7} roughness={0.35} />
+      </LanternPart>
+      <LanternPart geometry={lanternCore} y={0.22}>
+        <meshStandardMaterial color="#ffd391" emissive="#ffb24f" emissiveIntensity={2.6} toneMapped={false} />
+      </LanternPart>
+      <LanternPart geometry={lanternShell} y={0.22} castShadow>
+        <meshStandardMaterial map={panel} alphaTest={0.5} metalness={0.65} roughness={0.38} side={DoubleSide} />
+      </LanternPart>
+      <LanternPart geometry={lanternDome} y={0} castShadow>
+        <meshStandardMaterial map={pierce} alphaTest={0.5} metalness={0.65} roughness={0.38} side={DoubleSide} />
+      </LanternPart>
+      <LanternPart geometry={lanternCrownGlow} y={0.5}>
+        <meshStandardMaterial color="#ffd391" emissive="#ffb24f" emissiveIntensity={2} toneMapped={false} />
+      </LanternPart>
+      <LanternPart geometry={lanternFinial} y={0.655}>
+        <meshStandardMaterial color={BRASS} metalness={0.7} roughness={0.35} />
+      </LanternPart>
+      <Instances geometry={chainGeometry} limit={hanging.length}>
+        <meshStandardMaterial color="#3a2a1a" metalness={0.5} roughness={0.5} />
+        {hanging.map(({ position: [x, y, z], size, chain }, i) => (
+          <Instance key={i} position={[x, y + LANTERN_HEIGHT * size + chain / 2, z]} scale={[1, chain, 1]} />
+        ))}
+      </Instances>
+      {/* Iron arms carrying the pillar lanterns. */}
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          position={[side * ENTRANCE.pillarX, PILLAR_ARM.y, ENTRANCE.pillarFrontZ + PILLAR_ARM.reach / 2]}
+          rotation-x={Math.PI / 2}
+        >
+          <cylinderGeometry args={[0.016, 0.016, PILLAR_ARM.reach, 6]} />
+          <meshStandardMaterial color="#2b2420" metalness={0.5} roughness={0.55} />
         </mesh>
-      )}
-      <group scale={size}>
-        <mesh position={[0, 0.03, 0]} castShadow>
-          <cylinderGeometry args={[0.15, 0.17, 0.06, 6]} />
-          <meshStandardMaterial color={BRASS} metalness={0.7} roughness={0.35} />
-        </mesh>
-        <mesh position={[0, 0.22, 0]}>
-          <cylinderGeometry args={[0.125, 0.125, 0.32, 6]} />
-          <meshStandardMaterial color="#ffd391" emissive="#ffb24f" emissiveIntensity={2.6} toneMapped={false} />
-        </mesh>
-        <mesh position={[0, 0.22, 0]} castShadow>
-          <cylinderGeometry args={[0.15, 0.15, 0.34, 6, 1, true]} />
-          <meshStandardMaterial map={panel} alphaTest={0.5} metalness={0.65} roughness={0.38} side={DoubleSide} />
-        </mesh>
-        <mesh geometry={lanternDome} castShadow>
-          <meshStandardMaterial map={pierce} alphaTest={0.5} metalness={0.65} roughness={0.38} side={DoubleSide} />
-        </mesh>
-        <mesh position={[0, 0.5, 0]}>
-          <sphereGeometry args={[0.07, 10, 8]} />
-          <meshStandardMaterial color="#ffd391" emissive="#ffb24f" emissiveIntensity={2} toneMapped={false} />
-        </mesh>
-        <mesh position={[0, 0.655, 0]}>
-          <sphereGeometry args={[0.028, 8, 6]} />
-          <meshStandardMaterial color={BRASS} metalness={0.7} roughness={0.35} />
-        </mesh>
-        <sprite position={[0, 0.28, 0]} scale={[1.3, 1.3, 1]}>
+      ))}
+      {LANTERNS.map(({ position: [x, y, z], size }, i) => (
+        <sprite key={i} position={[x, y + 0.28 * size, z]} scale={[1.3 * size, 1.3 * size, 1]}>
           <spriteMaterial
             map={glow}
             color="#ffb35c"
@@ -261,51 +341,7 @@ function MoroccanLantern({ position, size = 1, chain = 0 }: { position: Vec3; si
             fog={false}
           />
         </sprite>
-      </group>
-    </group>
-  );
-}
-
-/** A lantern hanging from an iron bracket on the front of a pillar. */
-function PillarLantern({ side }: { side: number }) {
-  const reach = 0.45;
-  const armY = 3.7;
-  const z = ENTRANCE.pillarFrontZ;
-  return (
-    <group position={[side * ENTRANCE.pillarX, 0, z]}>
-      <mesh position={[0, armY, reach / 2]} rotation-x={Math.PI / 2}>
-        <cylinderGeometry args={[0.016, 0.016, reach, 6]} />
-        <meshStandardMaterial color="#2b2420" metalness={0.5} roughness={0.55} />
-      </mesh>
-      <MoroccanLantern position={[0, armY - 0.2 - 0.65 * 0.9, reach]} size={0.9} chain={0.2} />
-    </group>
-  );
-}
-
-/** Lanterns hanging in the arch, on the pillars and standing along the approach. */
-function Lanterns() {
-  const passage = GATE_FACE_Z - 0.35;
-  const soffitAt = (x: number) => ARCH_SPRING + Math.sqrt(ARCH_RADIUS ** 2 - x ** 2);
-  return (
-    <group>
-      {/* Centre of the arch, in front of the swags. */}
-      <MoroccanLantern position={[0, 4.15, ENTRANCE.surroundFrontZ + 0.55]} size={1.25} chain={DRAPE_TOP - 4.15 - 0.65 * 1.25} />
-      {/* Either side, just inside the arch. */}
-      {[-1, 1].map((side) => (
-        <MoroccanLantern
-          key={side}
-          position={[side * 2.45, 3.75, passage]}
-          size={1}
-          chain={soffitAt(2.45) - 3.75 - 0.65}
-        />
       ))}
-      {[-1, 1].map((side) => (
-        <PillarLantern key={`p${side}`} side={side} />
-      ))}
-      {/* Standing lanterns lining the approach to the gate. */}
-      {[-1, 1].map((side) =>
-        [13.7, 14.9, 16.1].map((z) => <MoroccanLantern key={`${side}${z}`} position={[side * 1.9, 0, z]} size={0.9} />),
-      )}
       {/* Warm light from the lanterns onto the drapery and the ground. */}
       <pointLight color="#ffb56b" intensity={9} distance={7} decay={2} position={[0, 4.6, GATE_FACE_Z + 1.4]} />
       <pointLight color="#ffb56b" intensity={5} distance={6.5} decay={2} position={[0, 0.9, 16.2]} />

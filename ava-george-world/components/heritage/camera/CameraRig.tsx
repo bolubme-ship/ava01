@@ -3,7 +3,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { MathUtils, Object3D, PerspectiveCamera, SpotLight, Vector3 } from "three";
-import { CAMERA_STATIONS } from "../config";
+import { CAMERA_STATIONS, PORTRAIT_ASPECT, type CameraStation } from "../config";
 import type { ScrollProgress } from "../hooks/useScrollProgress";
 import { createCameraPath, snapToStation } from "./cameraPath";
 
@@ -37,7 +37,13 @@ interface CameraRigProps {
  * so only close framings of a look are lit. One light for the whole walk.
  */
 export function CameraRig({ progress, reducedMotion }: CameraRigProps) {
-  const path = useMemo(() => createCameraPath(CAMERA_STATIONS), []);
+  const paths = useMemo(
+    () => ({
+      landscape: createCameraPath(CAMERA_STATIONS),
+      portrait: createCameraPath(CAMERA_STATIONS.map((s): CameraStation => ({ ...s, ...s.portrait }))),
+    }),
+    [],
+  );
   const position = useRef(new Vector3());
   const target = useRef(new Vector3());
   const right = useRef(new Vector3());
@@ -49,6 +55,7 @@ export function CameraRig({ progress, reducedMotion }: CameraRigProps) {
   useFrame(({ camera, clock, size }) => {
     const lens = camera as PerspectiveCamera;
     const aspect = size.width / size.height;
+    const path = aspect < PORTRAIT_ASPECT ? paths.portrait : paths.landscape;
     const raw = progress.current.value;
     const t = reducedMotion ? snapToStation(raw, path.segments) : raw;
     const lensScale = path.sample(t, position.current, target.current);

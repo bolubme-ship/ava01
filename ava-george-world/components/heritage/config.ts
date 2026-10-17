@@ -42,7 +42,12 @@ export interface CameraStation {
   target: Vec3;
   /** Multiplier on the base field of view; >1 is a wider lens. Default 1. */
   lens?: number;
+  /** Framing used instead on portrait (phone) screens, where the view is tall and narrow. */
+  portrait?: Omit<CameraStation, "portrait">;
 }
+
+/** Aspect ratio (width / height) below which the portrait framings apply. */
+export const PORTRAIT_ASPECT = 0.8;
 
 export interface Chapter {
   eyebrow: string;
@@ -173,6 +178,8 @@ const AVENUE_STATION: CameraStation = {
   position: [0.6, 1.55, COURTYARD.halfZ + 1.1],
   target: [-1.0, 2.05, 0],
   lens: 1.3,
+  // Tilted down a touch so the looks, not the canopies, fill a tall screen.
+  portrait: { position: [0.4, 1.6, COURTYARD.halfZ + 1.1], target: [-0.6, 1.45, 0], lens: 1.2 },
 };
 
 /**
@@ -222,6 +229,8 @@ const STOPS: Stop[] = [
       position: [0, 1.45, COURTYARD.halfZ + 7.2],
       target: [0, 3.6, COURTYARD.halfZ - 19],
       lens: 1.38,
+      // Further back on phones, so the whole dressed entrance fits the narrow view.
+      portrait: { position: [0, 1.5, COURTYARD.halfZ + 12.5], target: [0, 4.4, COURTYARD.halfZ - 6], lens: 1.38 },
     },
     chapter: {
       eyebrow: "Ava & George World",
