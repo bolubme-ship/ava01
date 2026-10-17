@@ -5,7 +5,9 @@ import { useCallback, useRef } from "react";
 import { CHAPTERS, SCROLL_PER_STOP, stopIndexForPedestal } from "./config";
 import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
 import { useScrollProgress } from "./hooks/useScrollProgress";
-import { Hero, ScrollCue } from "./ui/Hero";
+import { useSmoothScroll } from "./hooks/useSmoothScroll";
+import { ChapterOverlay } from "./ui/ChapterOverlay";
+import { ScrollCue } from "./ui/Hero";
 import { SiteHeader } from "./ui/SiteHeader";
 
 // WebGL needs the browser, so the canvas is never server-rendered.
@@ -15,8 +17,8 @@ const HeritageCanvas = dynamic(() => import("./HeritageCanvas"), { ssr: false })
  * The Heritage courtyard: a fixed full-screen 3D canvas behind a tall scroll
  * track. Each chapter section spans the scroll distance of one camera stop
  * (the last is a single screen), so section i starts exactly when the camera
- * reaches station i. Its copy is pinned while the camera lingers there.
- * Chapter 0 is the homepage hero.
+ * reaches station i. Its copy reveals in a fixed overlay as the camera
+ * arrives and clears as it moves on. Chapter 0 is the homepage hero.
  */
 export function HeritageExperience() {
   const mainRef = useRef<HTMLElement>(null);
@@ -24,15 +26,21 @@ export function HeritageExperience() {
   const labelLayerRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
   const progress = useScrollProgress(trackRef, { reducedMotion });
+  const lenis = useSmoothScroll(!reducedMotion);
 
   const scrollToStop = useCallback(
     (stop: number) => {
       const section = document.getElementById(`stop-${stop}`);
       if (!section) return;
+      if (lenis.current) {
+        // A long, eased glide so the camera travels rather than cuts.
+        lenis.current.scrollTo(section, { duration: 2.6, easing: (t) => 1 - Math.pow(1 - t, 4) });
+        return;
+      }
       const top = section.getBoundingClientRect().top + window.scrollY;
       window.scrollTo({ top, behavior: reducedMotion ? "auto" : "smooth" });
     },
-    [reducedMotion],
+    [lenis, reducedMotion],
   );
 
   const selectLook = useCallback((pedestal: number) => scrollToStop(stopIndexForPedestal(pedestal)), [scrollToStop]);
@@ -68,6 +76,13 @@ export function HeritageExperience() {
       <SiteHeader />
       <ScrollCue />
 
+      <ChapterOverlay chapters={CHAPTERS} progress={progress} onExplore={() => scrollToStop(1)} />
+
+      {/*
+        The scroll track: one section per stop, sized to its share of the
+        journey. The copy itself lives in the fixed overlay above, revealed in
+        step with the camera; these headings keep the page's outline.
+      */}
       <div ref={trackRef} className="relative">
         {CHAPTERS.map((chapter, i) => (
           <section
@@ -75,37 +90,7 @@ export function HeritageExperience() {
             id={`stop-${i}`}
             style={{ height: i === CHAPTERS.length - 1 ? "100svh" : `${SCROLL_PER_STOP * 100}svh` }}
           >
-            {i === 0 ? (
-              <div className="sticky top-0">
-                <Hero chapter={chapter} onExplore={() => scrollToStop(1)} />
-              </div>
-            ) : chapter.silent ? (
-              <h2 className="sr-only">{chapter.title}</h2>
-            ) : (
-              <div className="sticky top-0 flex h-svh items-end px-4 pb-14 sm:px-10 sm:pb-20 lg:px-16">
-                {/* Local shade behind the copy, so it reads over bright floor and walls. */}
-                <div
-                  className="pointer-events-none absolute bottom-0 left-0 h-2/3 w-full bg-[radial-gradient(ellipse_at_bottom_left,rgba(42,23,12,0.6),rgba(42,23,12,0.25)_45%,transparent_70%)] sm:w-3/4"
-                  aria-hidden="true"
-                />
-                <div className="relative max-w-md text-[#fffaf2]">
-                  {chapter.eyebrow && (
-                    <>
-                      <p className="text-xs font-medium tracking-[0.34em] uppercase drop-shadow">{chapter.eyebrow}</p>
-                      <span className="mt-4 mb-4 block h-px w-10 bg-[#fffaf2]/80" aria-hidden="true" />
-                    </>
-                  )}
-                  <h2 className="font-display text-[clamp(2.6rem,5vw,4.25rem)] leading-[0.95] font-medium drop-shadow-[0_2px_12px_rgba(42,23,12,0.4)]">
-                    {chapter.title}
-                  </h2>
-                  {chapter.body && (
-                    <p className="mt-4 max-w-sm text-sm leading-relaxed text-[#fffaf2]/90 drop-shadow sm:text-base">
-                      {chapter.body}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
+            {i > 0 && <h2 className="sr-only">{chapter.title}</h2>}
           </section>
         ))}
       </div>
