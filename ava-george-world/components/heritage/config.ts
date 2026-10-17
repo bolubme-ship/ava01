@@ -279,8 +279,8 @@ export const PALETTE = {
   brass: "#c49a52",
   indigoCloth: "#2c3f6b",
   mustard: "#d9a23a",
-  hallWall: "#e3c8a2",
-  hallFloor: "#a9714a",
+  hallWall: "#fbe9d9",
+  hallFloor: "#e8cdb0",
   hallCeiling: "#5e3d24",
   lanternGlow: "#ffcf8a",
 };

@@ -9,6 +9,7 @@ import { Courtyard } from "./scene/Courtyard";
 import { DisplayPedestal } from "./scene/DisplayPedestal";
 import { InnerHall } from "./scene/InnerHall";
 import { Lighting } from "./scene/Lighting";
+import { PostEffects } from "./scene/PostEffects";
 import { AmbientMotionContext } from "./scene/motion";
 import { SkyDome } from "./scene/SkyDome";
 
@@ -74,6 +75,7 @@ export default function HeritageCanvas({
         </Suspense>
 
         <CameraRig progress={progress} reducedMotion={reducedMotion} />
+        <PostEffects />
       </AmbientMotionContext.Provider>
     </Canvas>
   );

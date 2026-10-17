@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Instance, Instances } from "@react-three/drei";
 import { AdditiveBlending, DoubleSide, ExtrudeGeometry, Path, Shape, ShapeGeometry } from "three";
 import { ALCOVE_ANGLES, ALCOVE_RADIUS, HALL, PALETTE, onHallRing, type Vec3 } from "../config";
-import { useSurfaceTexture } from "./surfaceTexture";
+import { useHeritageTexture } from "./assets";
 
 /*
  * The inner hall: a round, domed room behind the courtyard's back wall,
@@ -32,7 +32,9 @@ const TEXTILE_BANDS = [
 ];
 
 function CurvedWall() {
-  const texture = useSurfaceTexture(14, 1.5);
+  // Same photographed terracotta plaster as the courtyard, softened by a warm tint.
+  const texture = useHeritageTexture("plaster", 22, 2.4);
+  const normalMap = useHeritageTexture("plasterNormal", 22, 2.4);
   return (
     <group>
       <mesh position={[0, H / 2, CZ]} castShadow receiveShadow>
@@ -40,6 +42,7 @@ function CurvedWall() {
         <meshStandardMaterial
           color={PALETTE.hallWall}
           map={texture}
+          normalMap={normalMap}
           roughness={0.95}
           side={DoubleSide}
         />
@@ -106,12 +109,14 @@ function Ceiling() {
 }
 
 function Floor() {
-  const texture = useSurfaceTexture(5, 5);
+  // Limestone flags, warmed by the lantern light.
+  const texture = useHeritageTexture("limestone", 4.5, 4.5);
+  const normalMap = useHeritageTexture("limestoneNormal", 4.5, 4.5);
   return (
     <group>
       <mesh position={[0, 0.006, CZ]} rotation-x={-Math.PI / 2} receiveShadow>
         <circleGeometry args={[R, 96]} />
-        <meshStandardMaterial color={PALETTE.hallFloor} map={texture} roughness={0.55} />
+        <meshStandardMaterial color={PALETTE.hallFloor} map={texture} normalMap={normalMap} roughness={0.55} />
       </mesh>
       {(
         [
@@ -147,7 +152,7 @@ function LightShaft() {
         <meshBasicMaterial
           color="#fff0d2"
           transparent
-          opacity={0.07}
+          opacity={0.045}
           blending={AdditiveBlending}
           depthWrite={false}
           side={DoubleSide}
