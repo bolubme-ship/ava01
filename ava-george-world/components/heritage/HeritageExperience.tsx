@@ -49,14 +49,15 @@ export function HeritageExperience() {
         />
       </div>
       {/*
-        Colour grade, done in CSS so it costs nothing on the GPU: a warm
-        golden-hour wash and a soft vignette over the 3D scene.
+        Colour grade, done in CSS: a warm golden-hour wash and a soft vignette
+        over the 3D scene. Plain alpha layers (no blend modes), so the browser
+        composites them over the canvas without re-blending every frame.
       */}
       <div
         className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(60,25,8,0.35)_100%)]"
         aria-hidden="true"
       />
-      <div className="pointer-events-none fixed inset-0 bg-[#ffb36b]/10 mix-blend-soft-light" aria-hidden="true" />
+      <div className="pointer-events-none fixed inset-0 bg-[#ffb36b]/[0.04]" aria-hidden="true" />
       <div ref={labelLayerRef} className="pointer-events-none fixed inset-0 z-20 overflow-hidden" />
       {/* Soft scrim so overlay copy stays legible over bright walls. */}
       <div

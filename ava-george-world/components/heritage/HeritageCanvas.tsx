@@ -40,24 +40,23 @@ export default function HeritageCanvas({
   onSelectLook,
   labelLayer,
 }: HeritageCanvasProps) {
-  // Drops to 1× pixel density and cheaper occlusion when frames run slow.
+  // Set once, and never switched back, when the performance monitor finds
+  // frames running slow: 1× pixel density and cheaper occlusion. Switching
+  // only once avoids the hitch of repeatedly resizing and recompiling.
   const [lowPower, setLowPower] = useState(false);
 
   return (
     <Canvas
       shadows="percentage"
-      dpr={lowPower ? 1 : [1, 1.5]}
-      gl={{ antialias: true, powerPreference: "high-performance", toneMappingExposure: 1.05 }}
+      dpr={lowPower ? 1 : [1, 1.25]}
+      // The post-processing composer renders off-screen and does its own
+      // multisampling, so the canvas itself needs no antialiased buffer.
+      gl={{ antialias: false, powerPreference: "high-performance", toneMappingExposure: 1.05 }}
       camera={{ position: CAMERA_STATIONS[0].position, fov: 42, near: 0.1, far: 260 }}
       eventSource={eventSource as RefObject<HTMLElement>}
       eventPrefix="client"
     >
-      <PerformanceMonitor
-        flipflops={3}
-        onDecline={() => setLowPower(true)}
-        onIncline={() => setLowPower(false)}
-        onFallback={() => setLowPower(true)}
-      />
+      <PerformanceMonitor onDecline={() => setLowPower(true)} onFallback={() => setLowPower(true)} />
       <AmbientMotionContext.Provider value={!reducedMotion}>
         <color attach="background" args={[PALETTE.haze]} />
         <fog attach="fog" args={[PALETTE.haze, 40, 140]} />
