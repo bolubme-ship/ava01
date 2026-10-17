@@ -34,6 +34,7 @@ export const HERITAGE_TEXTURES = {
   datePalm: "textures/heritage/date-palm.webp",
   flameTree: "textures/heritage/flame-tree.webp",
   acacia: "textures/heritage/acacia.webp",
+  lookOrangeDress: "textures/heritage/look-orange-dress.webp",
 } as const;
 
 export type HeritageTextureName = keyof typeof HERITAGE_TEXTURES;

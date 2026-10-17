@@ -76,6 +76,7 @@ export default function HeritageCanvas({
               silhouette={p.silhouette}
               fabric={p.fabric}
               accent={p.accent}
+              image={p.image}
               animate={!reducedMotion}
               label={`Look ${String(i + 1).padStart(2, "0")}`}
               onSelect={() => onSelectLook(i)}

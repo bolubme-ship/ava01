@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { Html } from "@react-three/drei";
+import { Billboard, Html } from "@react-three/drei";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
-import { LatheGeometry, MathUtils, Vector2, type BufferGeometry, type Group } from "three";
+import { DoubleSide, LatheGeometry, MathUtils, Vector2, type BufferGeometry, type Group } from "three";
 import type { Silhouette, Vec3 } from "../config";
+import { useHeritageTexture, type HeritageTextureName } from "./assets";
 import { useFabricTexture, useProceduralTexture } from "./proceduralTextures";
 
 interface DisplayPedestalProps {
@@ -15,6 +16,8 @@ interface DisplayPedestalProps {
   fabric: string;
   /** Embroidery / trim colour. */
   accent: string;
+  /** Cut-out photo of the real garment; replaces the placeholder outfit when set. */
+  image?: HeritageTextureName;
   /** Gentle idle sway of the garment; off for reduced motion. */
   animate?: boolean;
   /** Short name shown on hover, e.g. "Look 03". */
@@ -43,6 +46,7 @@ export function DisplayPedestal({
   silhouette,
   fabric,
   accent,
+  image,
   animate = true,
   label,
   onSelect,
@@ -84,7 +88,11 @@ export function DisplayPedestal({
     <group position={position} rotation-y={rotationY} onPointerOver={over} onPointerOut={out} onClick={click}>
       <Plinth />
       <group ref={garment} position={[0, PLINTH_TOP, 0]}>
-        <DressForm silhouette={silhouette} fabric={fabric} accent={accent} />
+        {image ? (
+          <PhotoGarment image={image} />
+        ) : (
+          <DressForm silhouette={silhouette} fabric={fabric} accent={accent} />
+        )}
       </group>
 
       {hovered && (
@@ -211,6 +219,51 @@ function garmentGeometry(silhouette: Silhouette): BufferGeometry {
   geo.computeVertexNormals();
   garmentGeometries.set(silhouette, geo);
   return geo;
+}
+
+/** Height of a photographed garment on its stand, neckline to hem, in metres. */
+const PHOTO_GARMENT_HEIGHT = 1.05;
+/** Height above the plinth of the photographed garment's neckline. */
+const PHOTO_GARMENT_TOP = 1.32;
+
+/**
+ * A real garment from a cut-out product photo, hung on the brass stand. The
+ * photo turns about the vertical to face the viewer, so it always reads as
+ * the front of the outfit; a little self-light keeps its true colours while
+ * the scene's light and shadow still fall on it.
+ */
+function PhotoGarment({ image }: { image: HeritageTextureName }) {
+  const texture = useHeritageTexture(image);
+  const { width, height } = texture.image as { width: number; height: number };
+  const w = PHOTO_GARMENT_HEIGHT * (width / height);
+  const pole = PHOTO_GARMENT_TOP - PHOTO_GARMENT_HEIGHT * 0.5;
+  return (
+    <group>
+      <mesh position={[0, 0.01, 0]}>
+        <cylinderGeometry args={[0.09, 0.1, 0.02, 24]} />
+        <meshStandardMaterial color={BRASS} metalness={0.85} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, pole / 2, 0]} castShadow>
+        <cylinderGeometry args={[0.016, 0.016, pole, 10]} />
+        <meshStandardMaterial color={BRASS} metalness={0.85} roughness={0.3} />
+      </mesh>
+      <Billboard lockX lockZ position={[0, PHOTO_GARMENT_TOP - PHOTO_GARMENT_HEIGHT / 2, 0]}>
+        {/* Just in front of the stand's pole, so the pole stays hidden behind the garment. */}
+        <mesh position={[0, 0, 0.04]} castShadow>
+          <planeGeometry args={[w, PHOTO_GARMENT_HEIGHT]} />
+          <meshStandardMaterial
+            map={texture}
+            emissive="#ffffff"
+            emissiveMap={texture}
+            emissiveIntensity={0.18}
+            alphaTest={0.5}
+            roughness={0.85}
+            side={DoubleSide}
+          />
+        </mesh>
+      </Billboard>
+    </group>
+  );
 }
 
 interface DressFormProps {

@@ -14,6 +14,8 @@ export type Vec3 = [number, number, number];
 
 export type Silhouette = "dress" | "tunic";
 
+import type { HeritageTextureName } from "./scene/assets";
+
 export type Zone = "courtyard" | "hall";
 
 export interface PedestalConfig {
@@ -26,6 +28,11 @@ export interface PedestalConfig {
   fabric: string;
   /** Sash, collar or trouser colour on the placeholder. */
   accent: string;
+  /**
+   * Cut-out photo of the real garment (a heritage texture name). When set,
+   * it is shown on the stand in place of the placeholder outfit.
+   */
+  image?: HeritageTextureName;
 }
 
 export interface CameraStation {
@@ -89,7 +96,7 @@ export function onHallRing(radius: number, degrees: number, y = 0): Vec3 {
 
 /** Placeholder looks, in visiting order. Looks 1–5 are outside, 6–10 inside. */
 const LOOKS: Omit<PedestalConfig, "id" | "zone" | "position">[] = [
-  { silhouette: "dress", fabric: "#bf2430", accent: "#f3d9a4" },
+  { silhouette: "dress", fabric: "#e8812c", accent: "#f6d8b8", image: "lookOrangeDress" },
   { silhouette: "dress", fabric: "#22409b", accent: "#f2c14e" },
   { silhouette: "dress", fabric: "#e98ba1", accent: "#fff3ea" },
   { silhouette: "dress", fabric: "#17734a", accent: "#f3e2b8" },
