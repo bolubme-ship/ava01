@@ -15,13 +15,14 @@ import {
   Vector3,
   type BufferGeometry,
 } from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { Vec3 } from "../config";
 import { useHeritageTexture, type HeritageTextureName } from "./assets";
 import { mulberry32 } from "./random";
 import { useWindMaterial } from "./wind";
 
 /*
- * Procedural planting: bougainvillea, citrus trees, carved pots and leafy
+ * Planting: bougainvillea, trees, carved pots and photographed
  * potted plants. Every leaf and blossom is an instance, so a few draw calls
  * cover thousands of pieces, and the wind material lets each one flutter.
  */
@@ -71,8 +72,13 @@ const leafGeometry = (() => {
 const cardGeometry = new PlaneGeometry(1, 1);
 /** Card pivoting at its top edge, for sprays that hang from a stem. */
 const hangingCardGeometry = new PlaneGeometry(1, 1).translate(0, -0.5, 0);
-/** Card standing on its bottom edge, for plants rising from a pot. */
-const standingCardGeometry = new PlaneGeometry(1, 1).translate(0, 0.5, 0);
+/**
+ * Three unit cards standing on their bottom edges, crossed at 60° so a
+ * photographed plant reads as full from any angle, merged into one draw.
+ */
+const crossedCardGeometry = mergeGeometries(
+  [0, 1, 2].map((k) => new PlaneGeometry(1, 1).translate(0, 0.5, 0).rotateY((k * Math.PI) / 3)),
+);
 
 /** Rounded bract / petal (6 triangles) for bougainvillea and flowers. */
 const bractGeometry = new CircleGeometry(1, 6);
@@ -290,18 +296,15 @@ export function PottedPlant({ position, scale = 1, seed = 3 }: { position: Vec3;
   return (
     <group position={position} scale={scale}>
       <CarvedPot position={[0, 0, 0]} />
-      {[0, 1, 2].map((k) => (
-        <mesh
-          key={k}
-          geometry={standingCardGeometry}
-          position={[0, POT_RIM.urn - 0.12, 0]}
-          rotation-y={turn + (k * Math.PI) / 3}
-          scale={[0.95, 0.8, 1]}
-          castShadow
-        >
-          <meshStandardMaterial map={agave} alphaTest={0.5} side={DoubleSide} roughness={0.6} />
-        </mesh>
-      ))}
+      <mesh
+        geometry={crossedCardGeometry}
+        position={[0, POT_RIM.urn - 0.12, 0]}
+        rotation-y={turn}
+        scale={[0.95, 0.8, 0.95]}
+        castShadow
+      >
+        <meshStandardMaterial map={agave} alphaTest={0.5} side={DoubleSide} roughness={0.6} />
+      </mesh>
     </group>
   );
 }
@@ -449,18 +452,15 @@ export function CardPlant({
   return (
     <group position={position} scale={scale}>
       <CarvedPot position={[0, 0, 0]} shape={spec.pot} scale={spec.potScale} />
-      {[0, 1, 2].map((k) => (
-        <mesh
-          key={k}
-          geometry={standingCardGeometry}
-          position={[0, rim - spec.sink, 0]}
-          rotation-y={turn + (k * Math.PI) / 3}
-          scale={[spec.height * spec.aspect, spec.height, 1]}
-          castShadow
-        >
-          <meshStandardMaterial map={texture} alphaTest={0.5} side={DoubleSide} roughness={0.7} />
-        </mesh>
-      ))}
+      <mesh
+        geometry={crossedCardGeometry}
+        position={[0, rim - spec.sink, 0]}
+        rotation-y={turn}
+        scale={[spec.height * spec.aspect, spec.height, spec.height * spec.aspect]}
+        castShadow
+      >
+        <meshStandardMaterial map={texture} alphaTest={0.5} side={DoubleSide} roughness={0.7} />
+      </mesh>
     </group>
   );
 }

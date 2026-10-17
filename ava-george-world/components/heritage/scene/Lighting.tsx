@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { useThree } from "@react-three/fiber";
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Object3D } from "three";
 
 /**
@@ -46,4 +46,33 @@ export function Lighting() {
       <directionalLight color="#ffb88a" intensity={0.35} position={[-10, 6, -8]} />
     </>
   );
+}
+
+/** Frames over which the shadow map is redrawn after the scene appears or resizes. */
+const SHADOW_SETTLE_FRAMES = 90;
+
+/**
+ * Nearly everything the sun lights stands still, so its shadow map is drawn
+ * only while the scene settles (after it appears or the viewport resizes)
+ * instead of every frame. That halves the draw calls of each frame. Mount it
+ * inside the scene's Suspense boundary so it starts once the scene is in.
+ */
+export function BakedShadows() {
+  const width = useThree((s) => s.size.width);
+  const height = useThree((s) => s.size.height);
+  const frames = useRef(0);
+
+  useEffect(() => {
+    frames.current = 0;
+  }, [width, height]);
+
+  useFrame(({ gl }) => {
+    gl.shadowMap.autoUpdate = false;
+    if (frames.current < SHADOW_SETTLE_FRAMES) {
+      frames.current++;
+      gl.shadowMap.needsUpdate = true;
+    }
+  });
+
+  return null;
 }

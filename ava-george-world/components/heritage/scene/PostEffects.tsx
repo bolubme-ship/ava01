@@ -13,20 +13,22 @@ import { ToneMappingMode } from "postprocessing";
  * - Filmic tone mapping (applied here because the composer renders the
  *   scene off-screen, where the renderer's own tone mapping doesn't run).
  *
- * Phones get half-resolution occlusion and no multisampling to stay smooth.
+ * Phones, and any device the performance monitor finds struggling, get
+ * half-resolution occlusion and no multisampling to stay smooth.
  */
-export function PostEffects() {
+export function PostEffects({ lowPower = false }: { lowPower?: boolean }) {
   const isSmallScreen = useThree((s) => s.size.width < 768);
+  const cheap = isSmallScreen || lowPower;
 
   return (
-    <EffectComposer multisampling={isSmallScreen ? 0 : 4}>
+    <EffectComposer multisampling={cheap ? 0 : 4}>
       <N8AO
         aoRadius={1.1}
         distanceFalloff={0.6}
         intensity={2.2}
         color="#3d1f10"
-        quality={isSmallScreen ? "performance" : "medium"}
-        halfRes={isSmallScreen}
+        quality={cheap ? "performance" : "medium"}
+        halfRes={cheap}
       />
       <Bloom mipmapBlur luminanceThreshold={1} luminanceSmoothing={0.2} intensity={0.55} />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
