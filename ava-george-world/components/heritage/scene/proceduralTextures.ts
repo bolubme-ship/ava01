@@ -487,11 +487,12 @@ const timberBoards: Painter = (ctx, w, h, rand) => {
   }
 };
 
-/** Soft beam of light: brightest at the top, staying strong to where it lands, soft at both edges. */
+/** Soft beam of light: brightest at the top, holding its strength, then dissolving at the end; soft at both edges. */
 const lightRay: Painter = (ctx, w, h) => {
   const img = ctx.createImageData(w, h);
   for (let y = 0; y < h; y++) {
-    const along = 1 - 0.6 * Math.pow(y / h, 1.5);
+    const t = y / h;
+    const along = (1 - 0.5 * Math.pow(t, 1.5)) * Math.min(1, (1 - t) / 0.3);
     for (let x = 0; x < w; x++) {
       const across = Math.exp(-Math.pow((x / w - 0.5) * 4.2, 2));
       const i = (y * w + x) * 4;

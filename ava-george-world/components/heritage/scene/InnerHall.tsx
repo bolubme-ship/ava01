@@ -252,11 +252,17 @@ function Floor() {
 
 /** Where the skylight's shafts converge: the finale look on the dais, at chest height. */
 const SHAFT_FOCUS = new Vector3(0, HALL.daisHeight + 1.15, CZ);
+/**
+ * The shafts dissolve just above the garment, so they crown it with light
+ * without hanging a veil of haze in front of the cloth.
+ */
+const SHAFT_END_Y = HALL.daisHeight + 2.2;
 
 /**
  * Shafts of sunlight falling through the skylight onto the finale look:
  * soft additive cards in crossed pairs, merged into one draw, a warm pool on
- * the dais, and a spotlight from the skylight that lights the cloth itself.
+ * the dais, and a spotlight from the skylight that lights the cloth itself
+ * (gently, so the garment keeps its true colour and detail).
  */
 function SunShafts() {
   const ray = useProceduralTexture("lightRay");
@@ -272,7 +278,7 @@ function SunShafts() {
       // Aim at the look, spread a little so the shafts wrap around it.
       const aim = SHAFT_FOCUS.clone().add(new Vector3((rand() - 0.5) * 0.9, -0.6, (rand() - 0.5) * 0.9));
       const direction = aim.sub(origin).normalize();
-      const length = (top - HALL.daisHeight) / -direction.y;
+      const length = (top - SHAFT_END_Y) / -direction.y;
       const up = direction.negate();
       const across = new Vector3().crossVectors(up, new Vector3(0, 0, 1)).normalize();
       const facing = new Vector3().crossVectors(across, up);
@@ -323,7 +329,7 @@ function SunShafts() {
       <primitive object={target} />
       <spotLight
         color="#ffe6c0"
-        intensity={240}
+        intensity={110}
         distance={12}
         decay={2}
         angle={0.36}
